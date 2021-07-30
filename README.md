@@ -28,4 +28,8 @@ you should create a new virtual environment to mantain a clear separation.
 4. Navigate to the folder containing the codes, and run `pip install .` to install the package in the new environment,
 or `pip install -e .` if you want to be able to change the source on the run and make new functionality
 
-5. You should install also `ipykernel` and install the new kernel if you want to use the Jupyter notebook.
+5. You should install also `ipykernel` and install the new kernel if you want to use the Jupyter notebook:
+    - Install `ipykernel` by pip
+    - Run `python -m ipykernel install --user --name covasim --display-name "Python (<Add some details here>)"`
+
+6. Now you're ready to go!
