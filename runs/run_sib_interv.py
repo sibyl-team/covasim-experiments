@@ -1,5 +1,5 @@
 
-from importlib import reload
+from pathlib import Path
 
 import argparse
 import pandas as pd
@@ -11,7 +11,7 @@ import sib
 import covasim
 import covasim.utils as cvu
 
-import covasibyl
+import sciris as sc
 
 from covasibyl.rankers import sib_rank
 from covasibyl import utils
@@ -25,6 +25,7 @@ class dummy_logger:
 
 
 MU_SIR = 0.0714
+OUT_FOLD = "results"
 
 
 def get_sib_pars(prob_i, prob_r, p_seed, p_sus=0.5):
@@ -121,3 +122,15 @@ if __name__ == "__main":
     ###
 
     tt = sim.make_transtree()
+
+    testranker = sim["interventions"][0]
+    assert type(testranker) == rktest.RankTester
+
+    rank_stats = pd.DataFrame(testranker.hist).to_records(index=False)
+
+    test_stats = np.concatenate(testranker.tester.all_tests)
+
+    save_dict = dict(tt=tt, rank_stats=rank_stats, test_stats=test_stats, sim_res=sim.results)    
+    out_fold = base.check_save_folder(OUT_FOLD)
+    savefile_name = args.prefix +f"_kc_{int(N/1000)}k_sib_res.pkl"
+    sc.saveobj(out_fold / savefile_name, save_dict)

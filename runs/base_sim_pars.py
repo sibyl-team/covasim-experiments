@@ -34,5 +34,14 @@ def create_parser():
     parser = argparse.ArgumentParser(description='Run simulation with covasim and rankers')
 
     parser.add_argument("--seed", "-s", type=int, default=1, dest="seed")
+    parser.add_argument("--prefix", type=str, default="", help="Out file prefix")
 
     return parser
+
+def check_save_folder(fold, create=True):
+    p = Path(fold)
+    if not p.exists():
+        print(f"PROBLEM: folder of {fold} does NOT exist ")
+        if create:
+            p.mkdir(parents=True)
+    return p
