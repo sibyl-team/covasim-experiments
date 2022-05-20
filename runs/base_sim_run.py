@@ -104,6 +104,7 @@ def save_sim_results(sim, args, rk_name, out_fold):
     testranker = sim["interventions"][0]
     assert type(testranker) == ranktest.RankTester
 
+    print(testranker.hist[-1])
     rank_stats = pd.DataFrame(testranker.hist).to_records(index=False)
 
     test_stats = np.concatenate(testranker.tester.tests_stats)

@@ -66,7 +66,7 @@ def compute_probs_i_r(beta,T):
 if __name__ == "__main__":
 
     parser = base.create_parser()
-    parser.add_argument("--n_cores", default=5, help="Set the number of cores for sib")
+    parser.add_argument("--n_cores", default=5, type=int, help="Set the number of cores for sib")
 
     args = parser.parse_args()
     print("Arguments:")
