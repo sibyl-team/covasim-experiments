@@ -70,7 +70,6 @@ def build_run_sim(ranker_fn, rk_name, args):
     N = args.N
     T = args.T
     seed = args.seed
-    rk_name = args.ranker
     params = make_std_pars(N,T, seed=seed)
     popfile = get_people_file(seed, N)
 
@@ -99,6 +98,8 @@ def save_sim_results(sim, args, rk_name, out_fold):
     seed = args.seed
     tt = sim.make_transtree()
     N = sim.pars["pop_size"]
+    T= args.T
+    assert T == sim.pars["n_days"]
 
     testranker = sim["interventions"][0]
     assert type(testranker) == ranktest.RankTester
@@ -118,7 +119,7 @@ def save_sim_results(sim, args, rk_name, out_fold):
 
    
     out_fold = check_save_folder(out_fold)
-    savefile_name = args.prefix +f"epi_kc_{int(N/1000)}k_s_{seed}_rk_{rk_name}"
+    savefile_name = args.prefix +f"epi_kc_{int(N/1000)}k_T_{T}_s_{seed}_rk_{rk_name}"
     print("Saving results to: ", out_fold, savefile_name)
     sc.saveobj(out_fold / f"{savefile_name}_res.pkl", save_dict)
 

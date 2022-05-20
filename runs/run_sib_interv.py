@@ -17,7 +17,7 @@ from covasibyl.rankers import sib_rank
 from covasibyl import utils
 from covasibyl import ranktest as rktest
 
-import base_sim_pars as base
+import base_sim_run as base
 
 class dummy_logger:
     def info(self,s):
@@ -63,7 +63,7 @@ def compute_probs_i_r(beta,T):
     
     return prob_i, prob_r
 
-if __name__ == "__main":
+if __name__ == "__main__":
 
     parser = base.create_parser()
     parser.add_argument("--n_cores", default=5, help="Set the number of cores for sib")
@@ -71,12 +71,10 @@ if __name__ == "__main":
     args = parser.parse_args()
     print("Arguments:")
     print("\t",args)
-    N = 20000
-    T = 90
     seed = args.seed
 
-    params = base.make_std_pars(N,T, seed=seed)
-    popfile = base.get_people_file(seed, N)
+    T=args.T
+    N=args.N
 
     ### ranker parameter
     prob_seed = 1/N
@@ -88,8 +86,8 @@ if __name__ == "__main":
 
     sibPars = get_sib_pars(prob_i, prob_r, p_seed=prob_seed, p_sus=prob_sus)
 
-
-    sibRanker = sib_rank.SibRanker(
+    rk_name = "sib"
+    mkranker = lambda: sib_rank.SibRanker(
         params=sibPars,
         maxit0=15,
         maxit1=20,
@@ -101,36 +99,9 @@ if __name__ == "__main":
         fpr=fp_rate
 
     )
-    sibRkTest = rktest.RankTester(sibRanker, "sib ranker",
-                                num_tests_algo=200,
-                                num_tests_rand=100,
-                                symp_test=80.,
-                                start_day=10,
-                                logger=dummy_logger(),
-                                )
+    
     sib.set_num_threads(args.n_cores)
 
-    ct = covasim.contact_tracing(trace_probs=.4, trace_time=1, start_day=10)
+    sim = base.build_run_sim(mkranker, rk_name, args)
 
-    sim = covasim.Sim(pars=params, interventions=[sibRkTest, ct],
-        popfile=popfile,
-        label="sib rk interv",
-    )
-
-    sim.run()
-
-    ###
-
-    tt = sim.make_transtree()
-
-    testranker = sim["interventions"][0]
-    assert type(testranker) == rktest.RankTester
-
-    rank_stats = pd.DataFrame(testranker.hist).to_records(index=False)
-
-    test_stats = np.concatenate(testranker.tester.all_tests)
-
-    save_dict = dict(tt=tt, rank_stats=rank_stats, test_stats=test_stats, sim_res=sim.results)    
-    out_fold = base.check_save_folder(OUT_FOLD)
-    savefile_name = args.prefix +f"_kc_{int(N/1000)}k_sib_res.pkl"
-    sc.saveobj(out_fold / savefile_name, save_dict)
+    base.save_sim_results(sim, args, rk_name, OUT_FOLD)
