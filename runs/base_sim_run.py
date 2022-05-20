@@ -15,6 +15,10 @@ class dummy_logger:
 BETA= 0.0149375 ## from best fit of the parameters to the King County area -> Kerr et al
 N_PEOPLE = 20000
 
+PARS_no_quar_red = {
+    "quar_factor":dict(zip(["h","s","c","w"],[1.]*4))
+}
+
 def make_std_pars(N=N_PEOPLE, T=100,seed=1, dynamic_layers=["w","c"]):
     pars_sim={  'pop_size'      : N,
                 'pop_scale'     : 1,
@@ -32,6 +36,8 @@ def make_std_pars(N=N_PEOPLE, T=100,seed=1, dynamic_layers=["w","c"]):
     pars_sim_test = dict(pars_sim)
     #pars_sim_test["n_days"] = 60
     pars_sim_test["dynam_layer"] = {k:1 for k in dynamic_layers}
+
+    pars_sim_test.update(PARS_no_quar_red)
 
     return pars_sim_test
 
@@ -104,6 +110,7 @@ def save_sim_results(sim, args, rk_name, out_fold):
     testranker = sim["interventions"][0]
     assert type(testranker) == ranktest.RankTester
 
+    #print(pd.DataFrame(testranker.hist[:15]) )
     print(testranker.hist[-1])
     rank_stats = pd.DataFrame(testranker.hist).to_records(index=False)
 
