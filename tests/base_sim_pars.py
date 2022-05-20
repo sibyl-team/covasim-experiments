@@ -1,3 +1,5 @@
+import argparse
+
 from pathlib import Path
 import covasim 
 BETA= 0.0149375 ## from best fit of the parameters to the King County area -> Kerr et al
@@ -27,3 +29,10 @@ def get_people_file(seed, n):
     p = Path("../runs/pops")
     f = p / f"kc_rnr_{int(n/1000)}k_seed{int(seed % 50)}.ppl"
     return f
+
+def create_parser():
+    parser = argparse.ArgumentParser(description='Run simulation with covasim and rankers')
+
+    parser.add_argument("--seed", "-s", type=int, default=1, dest="seed")
+
+    return parser
