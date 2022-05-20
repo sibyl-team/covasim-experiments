@@ -112,16 +112,27 @@ def save_sim_results(sim, args, rk_name, out_fold):
     del pars_sim["interventions"]
     del pars_sim["analyzers"]
 
+    def pars_log(x):
+        if x["source"] is None:
+            x["source"] = -1
+        return x
+    inf_log = pd.DataFrame(map(pars_log, 
+            sim.people.infection_log)).to_records(index=False)
+
     save_dict = dict(tt=tt, rank_stats=rank_stats, 
          test_stats=test_stats,
          sim_res=sim.results,
-         sim_pars=pars_sim) 
+         sim_pars=pars_sim,
+         infect_log=inf_log)
+
+    arrs_save = dict(rank_stats=rank_stats, test_stats=test_stats, infect_log=inf_log) 
 
    
     out_fold = check_save_folder(out_fold)
     savefile_name = args.prefix +f"epi_kc_{int(N/1000)}k_T_{T}_s_{seed}_rk_{rk_name}"
     print("Saving results to: ", out_fold, savefile_name)
     sc.saveobj(out_fold / f"{savefile_name}_res.pkl", save_dict)
+    np.savez_compressed(out_fold / f"{savefile_name}_stats.npz", arrs_save)
 
     args_d = vars(args)
 
