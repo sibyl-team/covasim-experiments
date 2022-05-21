@@ -31,7 +31,7 @@ OUT_FOLD = "results"
 def get_sib_pars(prob_i, prob_r, p_seed, p_sus=0.5):
     pseed = p_seed / (2 - p_seed)
     psus = p_sus * (1 - pseed)
-    pautoinf = 1e-6
+    pautoinf = 1e-10
 
     sibPars = sib.Params(
             prob_i=prob_i,#sib.Uniform(beta), #prob_i,
@@ -39,6 +39,19 @@ def get_sib_pars(prob_i, prob_r, p_seed, p_sus=0.5):
             pseed=pseed,
             psus=psus,
             pautoinf=pautoinf)
+    return sibPars
+
+def get_sib_markov_p(p_seed, p_sus, p_autoinf=1e-10):
+    pseed = p_seed / (2 - p_seed)
+    psus = p_sus * (1 - pseed)
+    mu_rate = -np.log(1-MU_SIR)
+
+    sibPars = sib.Params(
+            prob_i=sib.Uniform(base.BETA), #prob_i,
+            prob_r=sib.Exponential(mu_rate), #sib.Exponential(0.06), #prob_r,
+            pseed=pseed,
+            psus=psus,
+            pautoinf=p_autoinf)
     return sibPars
 
 def compute_probs_i_r(beta,T):
@@ -67,6 +80,8 @@ if __name__ == "__main__":
 
     parser = base.create_parser()
     parser.add_argument("--n_cores", default=5, type=int, help="Set the number of cores for sib")
+    parser.add_argument("--markov", action="store_true", help="Use Markov SIR params")
+    parser.add_argument("--n_src", default=1, type=int, help="Number of seeds in the epidemic cascade")
 
     args = parser.parse_args()
     print("Arguments:")
@@ -81,12 +96,18 @@ if __name__ == "__main__":
     prob_sus = 0.5
     fp_rate = 0.0
     fn_rate = 0.0
+    if args.markov:
+        print("Using markov SIR dynamics")
+        sibPars = get_sib_markov_p(prob_seed, prob_sus)
+    else:
 
-    prob_i, prob_r = compute_probs_i_r(base.BETA, T)
+        prob_i, prob_r = compute_probs_i_r(base.BETA, T)
 
-    sibPars = get_sib_pars(prob_i, prob_r, p_seed=prob_seed, p_sus=prob_sus)
+        sibPars = get_sib_pars(prob_i, prob_r, p_seed=prob_seed, p_sus=prob_sus)
 
     rk_name = "sib"
+    if args.markov:
+        rk_name+="_mk"
     mkranker = lambda: sib_rank.SibRanker(
         params=sibPars,
         maxit0=15,
