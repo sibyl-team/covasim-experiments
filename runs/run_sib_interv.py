@@ -110,7 +110,7 @@ if __name__ == "__main__":
         rk_name+="_mk"
     mkranker = lambda: sib_rank.SibRanker(
         params=sibPars,
-        maxit0=15,
+        maxit0=20,
         maxit1=20,
         tol=1e-3,
         memory_decay=1e-5,
