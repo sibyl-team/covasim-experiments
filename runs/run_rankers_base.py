@@ -5,12 +5,7 @@ import sys
 import pandas as pd
 import numpy as np
 
-import covasim
-import covasim.utils as cvu
 
-import sciris as sc
-
-from covasibyl.rankers import sib_rank
 from covasibyl import utils
 from covasibyl import ranktest as rktest
 
@@ -44,7 +39,7 @@ if __name__ == "__main__":
 
     rk_name = args.ranker
 
-    ranker_fn = lambda: get_ranker(rk_name, 10, 4, base_sim.BETA, MU_SIR)
+    ranker_fn = lambda: get_ranker(rk_name, 8, 3, base_sim.BETA, MU_SIR)
 
     sim = base_sim.build_run_sim(ranker_fn, rk_name, args)
 

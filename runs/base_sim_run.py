@@ -51,7 +51,7 @@ def create_parser():
 
     parser.add_argument("-s","--seed", type=int, default=1, dest="seed")
     parser.add_argument("-N", type=int, default=int(20e3), dest="N", help="Number of agents")
-    parser.add_argument("-T",type=int, default=90, dest="T", help="Number of days to run" )
+    parser.add_argument("-T",type=int, default=50, dest="T", help="Number of days to run" )
     parser.add_argument("--prefix", type=str, default="", help="Out file prefix")
     parser.add_argument("--nt_algo", type=int, default=200,
         help="Number of test per day for the ranking algorithm")
@@ -71,7 +71,7 @@ def check_save_folder(fold, create=True):
             p.mkdir(parents=True)
     return p
     
-def build_run_sim(ranker_fn, rk_name, args):
+def build_run_sim(ranker_fn, rk_name, args, run=True):
     ## construct the simulation and run it
     N = args.N
     T = args.T
@@ -95,8 +95,8 @@ def build_run_sim(ranker_fn, rk_name, args):
         popfile=popfile,
         label=f"{rk_name} ranking interv",
     )
-
-    sim.run()
+    if run:
+        sim.run()
 
     return sim
 
@@ -126,14 +126,25 @@ def save_sim_results(sim, args, rk_name, out_fold):
         return x
     inf_log = pd.DataFrame(map(pars_log, 
             sim.people.infection_log)).to_records(index=False)
+    rdata = dict(testranker.ranker_data)
+    
+    if "logger" in rdata: del rdata["logger"]
+    print("ranker_data: ", rdata.keys())
+    if len(rdata.keys())==0:
+        ranker_data = np.empty(0)
+    else:
+        ranker_data = pd.DataFrame(rdata).to_records(index=False)
 
-    save_dict = dict(tt=tt, rank_stats=rank_stats, 
-         test_stats=test_stats,
+    arrs_save = dict(rank_stats=rank_stats, test_stats=test_stats,
+            ranker_data=ranker_data,
+            infect_log=inf_log)
+
+    save_dict = dict(tt=tt,  
          sim_res=sim.results,
          sim_pars=pars_sim,
-         infect_log=inf_log)
-
-    arrs_save = dict(rank_stats=rank_stats, test_stats=test_stats, infect_log=inf_log) 
+         )
+    
+    save_dict.update(arrs_save)
 
    
     out_fold = check_save_folder(out_fold)
