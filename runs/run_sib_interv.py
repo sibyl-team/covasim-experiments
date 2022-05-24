@@ -31,7 +31,7 @@ OUT_FOLD = "results"
 def get_sib_pars(prob_i, prob_r, p_seed, p_sus=0.5):
     pseed = p_seed / (2 - p_seed)
     psus = p_sus * (1 - pseed)
-    pautoinf = 1e-10
+    pautoinf = 1e-6
 
     sibPars = sib.Params(
             prob_i=prob_i,#sib.Uniform(beta), #prob_i,
@@ -92,10 +92,10 @@ if __name__ == "__main__":
     N=args.N
 
     ### ranker parameter
-    prob_seed = 1/N
+    prob_seed = args.n_src/N
     prob_sus = 0.5
-    fp_rate = 0.0
-    fn_rate = 0.0
+    fp_rate = 1e-6
+    fn_rate = 1e-6
     if args.markov:
         print("Using markov SIR dynamics")
         sibPars = get_sib_markov_p(prob_seed, prob_sus)
@@ -105,6 +105,7 @@ if __name__ == "__main__":
 
         sibPars = get_sib_pars(prob_i, prob_r, p_seed=prob_seed, p_sus=prob_sus)
 
+    print("sib pars:", sibPars)
     rk_name = "sib"
     if args.markov:
         rk_name+="_mk"
@@ -123,6 +124,6 @@ if __name__ == "__main__":
     
     sib.set_num_threads(args.n_cores)
 
-    sim = base.build_run_sim(mkranker, rk_name, args)
+    sim = base.build_run_sim(mkranker, rk_name, args, OUT_FOLD)
 
     base.save_sim_results(sim, args, rk_name, OUT_FOLD)
