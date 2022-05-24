@@ -42,7 +42,9 @@ def make_std_pars(N=N_PEOPLE, T=100,seed=1, dynamic_layers=["w","c"]):
     return pars_sim_test
 
 def get_people_file(seed, n):
-    p = Path("../runs/pops")
+    pare = Path(__file__).parent
+    print(pare)
+    p = pare/Path("../runs/pops")
     f = p / f"kc_rnr_{int(n/1000)}k_seed{int(seed % 50)}.ppl"
     return f
 
@@ -60,6 +62,8 @@ def create_parser():
 
     parser.add_argument("--day_start", default=10, dest="start_day",
         help="day to start the intervention")
+    parser.add_argument("--save_every", default=5, type=int, dest="n_days_save",
+        help="Number of days to wait before saving results periodically")
 
     return parser
 
@@ -70,14 +74,22 @@ def check_save_folder(fold, create=True):
         if create:
             p.mkdir(parents=True)
     return p
-    
-def build_run_sim(ranker_fn, rk_name, args, run=True):
+
+def save_data(sim, period,  args, rk_name, out_fold, start_day):
+    if sim.t > start_day and  (sim.t % period) == 0:
+        save_sim_results(sim, args, rk_name, out_fold)
+
+def make_save_data(period,  args, rk_name, out_fold):
+    return lambda sim: save_data(sim, period,  args, rk_name, out_fold)
+
+def build_run_sim(ranker_fn, rk_name, args, out_fold, run=True):
     ## construct the simulation and run it
     N = args.N
     T = args.T
     seed = args.seed
     params = make_std_pars(N,T, seed=seed)
     popfile = get_people_file(seed, N)
+    period_save = args.n_days_save
 
     ranker = ranker_fn()
 
@@ -88,12 +100,13 @@ def build_run_sim(ranker_fn, rk_name, args, run=True):
                                 start_day=args.start_day,
                                 logger=dummy_logger(),
                                 )
-
+    analyz = [lambda sim: save_data(sim, period_save,  args, rk_name, out_fold, args.start_day)]
     ct = covasim.contact_tracing(trace_probs=.4, trace_time=1, start_day=10)
 
     sim = covasim.Sim(pars=params, interventions=[sibRkTest, ct],
         popfile=popfile,
         label=f"{rk_name} ranking interv",
+        analyzers=analyz,
     )
     if run:
         sim.run()
@@ -102,9 +115,9 @@ def build_run_sim(ranker_fn, rk_name, args, run=True):
 
 def save_sim_results(sim, args, rk_name, out_fold):
     seed = args.seed
-    tt = sim.make_transtree()
     N = sim.pars["pop_size"]
     T= args.T
+    
     assert T == sim.pars["n_days"]
 
     testranker = sim["interventions"][0]
@@ -139,6 +152,11 @@ def save_sim_results(sim, args, rk_name, out_fold):
             ranker_data=ranker_data,
             infect_log=inf_log)
 
+    if sim.results_ready:
+        tt = sim.make_transtree()
+    else:
+        tt = []
+    
     save_dict = dict(tt=tt,  
          sim_res=sim.results,
          sim_pars=pars_sim,
