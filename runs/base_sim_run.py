@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+from turtle import update
 
 
 import numpy as np
@@ -16,7 +17,7 @@ BETA= 0.0149375 ## from best fit of the parameters to the King County area -> Ke
 N_PEOPLE = 20000
 
 PARS_no_quar_red = {
-    "quar_factor":dict(zip(["h","s","c","w"],[1.]*4))
+    "quar_factor":dict(zip(["h","s","c","w","l"],[1.]*5))
 }
 
 def make_std_pars(N=N_PEOPLE, T=100,seed=1, dynamic_layers=["w","c"]):
@@ -60,7 +61,7 @@ def create_parser():
     parser.add_argument("--nt_rand", type=int, default=100, 
         help="Number of random tests per day to find symptomatics")
 
-    parser.add_argument("--day_start", default=10, dest="start_day",
+    parser.add_argument("--day_start", default=10, type=int, dest="start_day",
         help="day to start the intervention")
     parser.add_argument("--save_every", default=5, type=int, dest="n_days_save",
         help="Number of days to wait before saving results periodically")
@@ -76,13 +77,24 @@ def check_save_folder(fold, create=True):
     return p
 
 def save_data(sim, period,  args, rk_name, out_fold, start_day):
-    if sim.t > start_day and  (sim.t % period) == 0:
+    if sim.t > 1 and  (sim.t % period) == 0:
         save_sim_results(sim, args, rk_name, out_fold)
 
 def make_save_data(period,  args, rk_name, out_fold):
     return lambda sim: save_data(sim, period,  args, rk_name, out_fold)
 
-def build_run_sim(ranker_fn, rk_name, args, out_fold, run=True):
+def make_interv(ranker, rk_name, args, **kwargs):
+    rktest_int = ranktest.RankTester(ranker, f"{rk_name} ranker",
+                                num_tests_algo=args.nt_algo,
+                                num_tests_rand=args.nt_rand,
+                                symp_test=80.,
+                                start_day=args.start_day,
+                                logger=dummy_logger(),
+                                **kwargs
+                                )
+    return rktest_int
+
+def build_run_sim(rktest_int, rk_name, args, out_fold, run=True):
     ## construct the simulation and run it
     N = args.N
     T = args.T
@@ -91,19 +103,10 @@ def build_run_sim(ranker_fn, rk_name, args, out_fold, run=True):
     popfile = get_people_file(seed, N)
     period_save = args.n_days_save
 
-    ranker = ranker_fn()
-
-    sibRkTest = ranktest.RankTester(ranker, f"{rk_name} ranker",
-                                num_tests_algo=args.nt_algo,
-                                num_tests_rand=args.nt_rand,
-                                symp_test=80.,
-                                start_day=args.start_day,
-                                logger=dummy_logger(),
-                                )
     analyz = [lambda sim: save_data(sim, period_save,  args, rk_name, out_fold, args.start_day)]
     ct = covasim.contact_tracing(trace_probs=.4, trace_time=1, start_day=10)
 
-    sim = covasim.Sim(pars=params, interventions=[sibRkTest, ct],
+    sim = covasim.Sim(pars=params, interventions=[rktest_int, ct],
         popfile=popfile,
         label=f"{rk_name} ranking interv",
         analyzers=analyz,
@@ -126,8 +129,12 @@ def save_sim_results(sim, args, rk_name, out_fold):
     #print(pd.DataFrame(testranker.hist[:15]) )
     print(testranker.hist[-1])
     rank_stats = pd.DataFrame(testranker.hist).to_records(index=False)
-
-    test_stats = np.concatenate(testranker.tester.tests_stats)
+    
+    ts = testranker.tester.tests_stats
+    if len(ts) > 0:
+        test_stats = np.concatenate(ts)
+    else:
+        test_stats = np.array([])
 
     pars_sim = dict(sim.pars)
     del pars_sim["interventions"]
@@ -140,17 +147,25 @@ def save_sim_results(sim, args, rk_name, out_fold):
     inf_log = pd.DataFrame(map(pars_log, 
             sim.people.infection_log)).to_records(index=False)
     rdata = dict(testranker.ranker_data)
+
+    arrs_save = dict()
     
     if "logger" in rdata: del rdata["logger"]
     print("ranker_data: ", rdata.keys())
+    for k in rdata.keys():
+        if "margs_" in k:
+            arrs_save[k] = rdata[k]
+    for k in arrs_save:
+        rdata.pop(k)
+
     if len(rdata.keys())==0:
         ranker_data = np.empty(0)
     else:
         ranker_data = pd.DataFrame(rdata).to_records(index=False)
 
-    arrs_save = dict(rank_stats=rank_stats, test_stats=test_stats,
+    arrs_save.update(dict(rank_stats=rank_stats, test_stats=test_stats,
             ranker_data=ranker_data,
-            infect_log=inf_log)
+            infect_log=inf_log))
 
     if sim.results_ready:
         tt = sim.make_transtree()

@@ -28,17 +28,16 @@ MU_SIR = 0.0714
 OUT_FOLD = "results"
 
 
-def get_sib_pars(prob_i, prob_r, p_seed, p_sus=0.5):
+def get_sib_pars(prob_i, prob_r, p_seed, p_sus=0.5, p_autoinf=1e-6):
     pseed = p_seed / (2 - p_seed)
     psus = p_sus * (1 - pseed)
-    pautoinf = 1e-6
 
     sibPars = sib.Params(
             prob_i=prob_i,#sib.Uniform(beta), #prob_i,
             prob_r=prob_r, #sib.Exponential(0.06), #prob_r,
             pseed=pseed,
             psus=psus,
-            pautoinf=pautoinf)
+            pautoinf=p_autoinf)
     return sibPars
 
 def get_sib_markov_p(p_seed, p_sus, p_autoinf=1e-10):
@@ -82,6 +81,8 @@ if __name__ == "__main__":
     parser.add_argument("--n_cores", default=5, type=int, help="Set the number of cores for sib")
     parser.add_argument("--markov", action="store_true", help="Use Markov SIR params")
     parser.add_argument("--n_src", default=1, type=int, help="Number of seeds in the epidemic cascade")
+    parser.add_argument("--p_autoinf", default=1e-6, type=float, help="Prob of autoinfection for sib")
+    parser.add_argument("--win_length", default=21, type=int, help="Length of BP window")
 
     args = parser.parse_args()
     print("Arguments:")
@@ -103,27 +104,31 @@ if __name__ == "__main__":
 
         prob_i, prob_r = compute_probs_i_r(base.BETA, T)
 
-        sibPars = get_sib_pars(prob_i, prob_r, p_seed=prob_seed, p_sus=prob_sus)
+        sibPars = get_sib_pars(prob_i, prob_r, p_seed=prob_seed,
+             p_sus=prob_sus, p_autoinf=args.p_autoinf)
 
     print("sib pars:", sibPars)
     rk_name = "sib"
     if args.markov:
         rk_name+="_mk"
-    mkranker = lambda: sib_rank.SibRanker(
+    ranker = sib_rank.SibRanker(
         params=sibPars,
         maxit0=20,
         maxit1=20,
         tol=1e-3,
         memory_decay=1e-5,
-        window_length=21,
+        window_length=args.win_length,
         tau=0,
         fnr=fn_rate,
         fpr=fp_rate
 
     )
+    interv = base.make_interv(ranker, rk_name=rk_name, args=args)
+    interv._obs_source = True
+    args.prefix +="srco_t0_"
     
     sib.set_num_threads(args.n_cores)
 
-    sim = base.build_run_sim(mkranker, rk_name, args, OUT_FOLD)
+    sim = base.build_run_sim(interv, rk_name, args, OUT_FOLD)
 
     base.save_sim_results(sim, args, rk_name, OUT_FOLD)

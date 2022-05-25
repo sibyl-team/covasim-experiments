@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 
 
-from covasibyl import utils
+from covasibyl import base, utils
 from covasibyl import ranktest as rktest
 
 import base_sim_run as base_sim
@@ -20,7 +20,7 @@ values_vload = [1.53846, 0.76923]
 
 def get_ranker(which, tau, delta, beta, mu):
     
-    def_t = 8
+    def_t = 10
     if which == "MF":
         from covasibyl.rankers import mean_field_rank
         return mean_field_rank.MeanFieldRanker(tau=tau if tau > def_t else def_t,
@@ -39,6 +39,7 @@ if __name__ == "__main__":
     parser = base_sim.create_parser()
     parser.add_argument("--ranker", dest="ranker", type=str, help="Choose the ranker")
     parser.add_argument("--tau", type=int, default=-1, help="Number of days to use before current")
+    parser.add_argument("--delta",type=int, default=3, help="Delta for the MF ranker")
 
     args = parser.parse_args()
     print("Arguments:")
@@ -46,10 +47,12 @@ if __name__ == "__main__":
 
     rk_name = args.ranker
 
-    ranker_fn = lambda: get_ranker(rk_name, tau=args.tau, delta=3, 
+    ranker = get_ranker(rk_name, tau=args.tau, delta=3, 
             beta=base_sim.BETA, mu=MU_SIR)
 
-    sim = base_sim.build_run_sim(ranker_fn, rk_name, args, OUT_FOLD)
+    testrk_int = base_sim.make_interv(ranker, rk_name, args)
+
+    sim = base_sim.build_run_sim(testrk_int, rk_name, args, OUT_FOLD)
 
     base_sim.save_sim_results(sim, args, rk_name, OUT_FOLD)
 
