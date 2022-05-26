@@ -8,6 +8,7 @@ import pandas as pd
 import sciris as sc
 import covasim 
 from covasibyl import ranktest
+from covasibyl import analyzers as analysis
 
 class dummy_logger:
     def info(self,s):
@@ -103,7 +104,8 @@ def build_run_sim(rktest_int, rk_name, args, out_fold, run=True):
     popfile = get_people_file(seed, N)
     period_save = args.n_days_save
 
-    analyz = [lambda sim: save_data(sim, period_save,  args, rk_name, out_fold, args.start_day)]
+    analyz = [analysis.store_seir(),
+    lambda sim: save_data(sim, period_save,  args, rk_name, out_fold, args.start_day)]
     ct = covasim.contact_tracing(trace_probs=.4, trace_time=1, start_day=10)
 
     sim = covasim.Sim(pars=params, interventions=[rktest_int, ct],
@@ -111,6 +113,7 @@ def build_run_sim(rktest_int, rk_name, args, out_fold, run=True):
         label=f"{rk_name} ranking interv",
         analyzers=analyz,
     )
+
     if run:
         sim.run()
 
@@ -125,6 +128,11 @@ def save_sim_results(sim, args, rk_name, out_fold):
 
     testranker = sim["interventions"][0]
     assert type(testranker) == ranktest.RankTester
+    
+    counter = sim["analyzers"][0]
+    assert isinstance(counter, analysis.store_seir)
+
+    counts_arr = counter.out_save()
 
     #print(pd.DataFrame(testranker.hist[:15]) )
     print(testranker.hist[-1])
@@ -162,7 +170,8 @@ def save_sim_results(sim, args, rk_name, out_fold):
         ranker_data = np.empty(0)
     else:
         ranker_data = pd.DataFrame(rdata).to_records(index=False)
-
+    
+    arrs_save["sim_counts"] = counts_arr
     arrs_save.update(dict(rank_stats=rank_stats, test_stats=test_stats,
             ranker_data=ranker_data,
             infect_log=inf_log))
