@@ -123,9 +123,18 @@ if __name__ == "__main__":
         fpr=fp_rate
 
     )
-    interv = base.make_interv(ranker, rk_name=rk_name, args=args)
-    interv._obs_source = True
-    args.prefix +="srco_t0_"
+    interv = base.make_interv_new(ranker, rk_name, args)
+
+    if args.full_iso:
+        interv.iso_cts_strength = 0.
+        args.prefix+="fulliso_"
+    #interv.mitigate = False
+    #interv._check_epi_tests = True
+    #args.prefix +="nomit_rndtest_"
+    args.prefix+="newrk_"
+    #interv.mitigate = False
+    #interv._check_epi_tests = True
+    #args.prefix +="nomit_rndtest_"
     
     sib.set_num_threads(args.n_cores)
 

@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import sciris as sc
 import covasim 
-from covasibyl import ranktest
+from covasibyl import ranktest, ranktestnew
 from covasibyl import analyzers as analysis
 
 class dummy_logger:
@@ -17,11 +17,15 @@ class dummy_logger:
 BETA= 0.0149375 ## from best fit of the parameters to the King County area -> Kerr et al
 N_PEOPLE = 20000
 
+LAYERS_KEYS=["h","s","c","w","l"]
 PARS_no_quar_red = {
     "quar_factor":dict(zip(["h","s","c","w","l"],[1.]*5))
 }
+FULL_ISO_PARS={
+    "iso_factor": {k: 0. for k in LAYERS_KEYS}
+}
 
-def make_std_pars(N=N_PEOPLE, T=100,seed=1, dynamic_layers=["w","c"]):
+def make_std_pars(N=N_PEOPLE, T=100,seed=1, dynamic_layers=["w","c"], full_iso=False):
     pars_sim={  'pop_size'      : N,
                 'pop_scale'     : 1,
                 'pop_type'      : 'synthpops',
@@ -40,6 +44,11 @@ def make_std_pars(N=N_PEOPLE, T=100,seed=1, dynamic_layers=["w","c"]):
     pars_sim_test["dynam_layer"] = {k:1 for k in dynamic_layers}
 
     pars_sim_test.update(PARS_no_quar_red)
+    
+    if full_iso:
+        pars_sim_test.update(FULL_ISO_PARS)
+    else:
+        pars_sim_test["iso_factor"] = {k: 0.1 for k in LAYERS_KEYS}
 
     return pars_sim_test
 
@@ -66,6 +75,8 @@ def create_parser():
         help="day to start the intervention")
     parser.add_argument("--save_every", default=5, type=int, dest="n_days_save",
         help="Number of days to wait before saving results periodically")
+
+    parser.add_argument("--full_iso", action="store_true", help="Test with full isolation")
 
     return parser
 
@@ -95,12 +106,22 @@ def make_interv(ranker, rk_name, args, **kwargs):
                                 )
     return rktest_int
 
+def make_interv_new(ranker, rk_name, args, **kwargs):
+    rktest_int = ranktestnew.RankTester(ranker, f"{rk_name} ranker",
+                                num_tests=args.nt_algo+args.nt_rand,
+                                start_day=args.start_day,
+                                logger=dummy_logger(),
+                                symp_test_p=0.5,
+                                **kwargs
+                                )
+    return rktest_int
+
 def build_run_sim(rktest_int, rk_name, args, out_fold, run=True):
     ## construct the simulation and run it
     N = args.N
     T = args.T
     seed = args.seed
-    params = make_std_pars(N,T, seed=seed)
+    params = make_std_pars(N,T, seed=seed, full_iso=args.full_iso)
     popfile = get_people_file(seed, N)
     period_save = args.n_days_save
 
@@ -127,7 +148,7 @@ def save_sim_results(sim, args, rk_name, out_fold):
     assert T == sim.pars["n_days"]
 
     testranker = sim["interventions"][0]
-    assert type(testranker) == ranktest.RankTester
+    #assert type(testranker) == ranktest.RankTester
     
     counter = sim["analyzers"][0]
     assert isinstance(counter, analysis.store_seir)

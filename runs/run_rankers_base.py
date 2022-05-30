@@ -50,9 +50,19 @@ if __name__ == "__main__":
     ranker = get_ranker(rk_name, tau=args.tau, delta=3, 
             beta=base_sim.BETA, mu=MU_SIR)
 
-    testrk_int = base_sim.make_interv(ranker, rk_name, args)
+    interv = base_sim.make_interv_new(ranker, rk_name, args)
 
-    sim = base_sim.build_run_sim(testrk_int, rk_name, args, OUT_FOLD)
+    if args.full_iso:
+        interv.iso_cts_strength = 0.
+        args.prefix+="fulliso_"
+    #interv.mitigate = False
+    #interv._check_epi_tests = True
+    #args.prefix +="nomit_rndtest_"
+    args.prefix+="newrk_"
+
+    
+
+    sim = base_sim.build_run_sim(interv, rk_name, args, OUT_FOLD)
 
     base_sim.save_sim_results(sim, args, rk_name, OUT_FOLD)
 
