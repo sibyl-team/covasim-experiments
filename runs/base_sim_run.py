@@ -10,6 +10,15 @@ import covasim
 from covasibyl import ranktest, ranktestnew
 from covasibyl import analyzers as analysis
 
+import subprocess
+
+def get_git_revision_hash() -> str:
+    return subprocess.check_output(['git', 'rev-parse', 'HEAD'],
+         cwd=Path(__file__).resolve().parent
+         ).decode('ascii').strip()
+
+git_version = get_git_revision_hash
+
 class dummy_logger:
     def info(self,s):
         print(s)
@@ -76,6 +85,8 @@ def create_parser():
     parser.add_argument("--save_every", default=5, type=int, dest="n_days_save",
         help="Number of days to wait before saving results periodically")
 
+    parser.add_argument("--fold_save", type=str, default="", help="Saving folder")
+
     parser.add_argument("--full_iso", action="store_true", help="Test with full isolation")
 
     return parser
@@ -121,6 +132,7 @@ def build_run_sim(rktest_int, rk_name, args, out_fold, run=True):
     N = args.N
     T = args.T
     seed = args.seed
+    args.git_version = {"runfiles": get_git_revision_hash()}
     params = make_std_pars(N,T, seed=seed, full_iso=args.full_iso)
     popfile = get_people_file(seed, N)
     period_save = args.n_days_save
@@ -144,6 +156,8 @@ def save_sim_results(sim, args, rk_name, out_fold):
     seed = args.seed
     N = sim.pars["pop_size"]
     T= args.T
+    if len(args.fold_save)>0:
+        out_fold = args.fold_save
     
     assert T == sim.pars["n_days"]
 
