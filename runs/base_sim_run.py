@@ -228,7 +228,7 @@ def save_sim_results(sim, args, rk_name, out_fold):
     savefile_name = args.prefix +f"epi_kc_{int(N/1000)}k_T_{T}_s_{seed}_rk_{rk_name}"
     print("Saving results to: ", out_fold, savefile_name)
     sc.saveobj(out_fold / f"{savefile_name}_res.pkl", save_dict)
-    np.savez_compressed(out_fold / f"{savefile_name}_stats.npz", arrs_save)
+    np.savez_compressed(out_fold / f"{savefile_name}_stats.npz", **arrs_save)
 
     args_d = vars(args)
 
