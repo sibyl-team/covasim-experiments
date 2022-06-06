@@ -35,6 +35,7 @@ FULL_ISO_PARS={
 }
 
 def make_std_pars(N=N_PEOPLE, T=100,seed=1, dynamic_layers=["w","c"], full_iso=False):
+    N=int(N)
     pars_sim={  'pop_size'      : N,
                 'pop_scale'     : 1,
                 'pop_type'      : 'synthpops',
@@ -72,7 +73,7 @@ def create_parser():
     parser = argparse.ArgumentParser(description='Run simulation with covasim and rankers')
 
     parser.add_argument("-s","--seed", type=int, default=1, dest="seed")
-    parser.add_argument("-N", type=int, default=int(20e3), dest="N", help="Number of agents")
+    parser.add_argument("-N", type=float, default=20e3, dest="N", help="Number of agents")
     parser.add_argument("-T",type=int, default=50, dest="T", help="Number of days to run" )
     parser.add_argument("--prefix", type=str, default="", help="Out file prefix")
     parser.add_argument("--nt_algo", type=int, default=200,
@@ -129,6 +130,7 @@ def make_interv_new(ranker, rk_name, args, **kwargs):
 
 def build_run_sim(rktest_int, rk_name, args, out_fold, run=True):
     ## construct the simulation and run it
+    args.N = int(args.N)
     N = args.N
     T = args.T
     seed = args.seed
