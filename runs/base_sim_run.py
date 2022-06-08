@@ -90,6 +90,11 @@ def create_parser():
 
     parser.add_argument("--full_iso", action="store_true", help="Test with full isolation")
 
+    parser.add_argument("--fnr", type=float, default=0., help="False negative test rate")
+    parser.add_argument("--fpr", type=float, default=0., help="False positive rate of testing")
+    parser.add_argument("--test_delay", type=int, default=0, help="Delay in delivering the tests (in days)")
+    parser.add_argument("--p_loss", type=float, default=0., help="Probability of losing a test result")
+
     return parser
 
 def check_save_folder(fold, create=True):
@@ -107,24 +112,33 @@ def save_data(sim, period,  args, rk_name, out_fold, start_day):
 def make_save_data(period,  args, rk_name, out_fold):
     return lambda sim: save_data(sim, period,  args, rk_name, out_fold)
 
+interv_args_def=lambda args: dict(
+    sensitivity=1-args.fnr,
+    specificity=1-args.fpr,
+    start_day=args.start_day,
+    loss_prob=args.p_loss,
+    test_delay=args.test_delay
+    )
 def make_interv(ranker, rk_name, args, **kwargs):
+    pars = interv_args_def(args)
+    pars.update(kwargs)
     rktest_int = ranktest.RankTester(ranker, f"{rk_name} ranker",
                                 num_tests_algo=args.nt_algo,
                                 num_tests_rand=args.nt_rand,
                                 symp_test=80.,
-                                start_day=args.start_day,
                                 logger=dummy_logger(),
-                                **kwargs
+                                **pars
                                 )
     return rktest_int
 
 def make_interv_new(ranker, rk_name, args, **kwargs):
+    pars = interv_args_def(args)
+    pars.update(kwargs)
     rktest_int = ranktestnew.RankTester(ranker, f"{rk_name} ranker",
                                 num_tests=args.nt_algo+args.nt_rand,
-                                start_day=args.start_day,
                                 logger=dummy_logger(),
                                 symp_test_p=0.5,
-                                **kwargs
+                                **pars
                                 )
     return rktest_int
 
