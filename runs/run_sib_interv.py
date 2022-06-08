@@ -95,8 +95,8 @@ if __name__ == "__main__":
     ### ranker parameter
     prob_seed = args.n_src/N
     prob_sus = 0.5
-    fp_rate = 1e-6
-    fn_rate = 1e-6
+    fp_rate = args.fpr if args.fpr > 0 else 1e-6
+    fn_rate = args.fnr if args.fnr > 0 else 1e-6
     if args.markov:
         print("Using markov SIR dynamics")
         sibPars = get_sib_markov_p(prob_seed, prob_sus)

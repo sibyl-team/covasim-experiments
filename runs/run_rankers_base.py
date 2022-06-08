@@ -31,6 +31,9 @@ def get_ranker(which, tau, delta, beta, mu):
     elif which=="greedy":
         from covasibyl.rankers import greedy_rank
         return greedy_rank.GreedyRanker(lamb=beta, tau=tau if tau > 5 else greedy_rank.TAU_INF)
+    elif which=="greedy2n":
+        from covasibyl.rankers import greedy_rank
+        return greedy_rank.GreedyRanker(lamb=beta, tau=tau if tau > 5 else greedy_rank.TAU_INF, sec_neigh=True )
     else:
         raise ValueError("Ranker not recognized")
     
