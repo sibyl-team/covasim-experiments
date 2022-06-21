@@ -62,9 +62,9 @@ def make_std_pars(N=N_PEOPLE, T=100,seed=1, dynamic_layers=["w","c"], full_iso=F
 
     return pars_sim_test
 
-def get_people_file(seed, n):
+def get_people_file(seed, n, verbose=True):
     pare = Path(__file__).parent
-    print(pare)
+    if verbose: print(pare)
     p = pare/Path("../runs/pops")
     f = p / f"kc_rnr_{int(n/1000)}k_seed{int(seed % 50)}.ppl"
     return f
@@ -241,7 +241,12 @@ def save_sim_results(sim, args, rk_name, out_fold):
 
    
     out_fold = check_save_folder(out_fold)
-    savefile_name = args.prefix +f"epi_kc_{int(N/1000)}k_T_{T}_s_{seed}_rk_{rk_name}"
+    fnr_str = ""
+    if args.fnr > 0:
+        fnr_str+=f"_fnr_{round(args.fnr,3)}"
+    if args.fpr > 0:
+        fnr_str+=f"_fpr_{round(args.fpr,3)}"
+    savefile_name = args.prefix +f"epi_kc_{int(N/1000)}k_T_{T}{fnr_str}_s_{seed}_rk_{rk_name}"
     print("Saving results to: ", out_fold, savefile_name)
     sc.saveobj(out_fold / f"{savefile_name}_res.pkl", save_dict)
     np.savez_compressed(out_fold / f"{savefile_name}_stats.npz", **arrs_save)
