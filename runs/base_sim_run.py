@@ -24,6 +24,7 @@ class dummy_logger:
         print(s)
 
 BETA= 0.0149375 ## from best fit of the parameters to the King County area -> Kerr et al
+REL_T_MED=0.41
 N_PEOPLE = 20000
 
 LAYERS_KEYS=["h","s","c","w","l"]
@@ -142,8 +143,10 @@ def make_interv_new(ranker, rk_name, args, **kwargs):
                                 )
     return rktest_int
 
-def build_run_sim(rktest_int, rk_name, args, out_fold, run=True):
+def build_run_sim(rktest_int, rk_name, args, out_fold, run=True, args_analy=None):
     ## construct the simulation and run it
+    if args_analy==None:
+        args_analy = dict()
     args.N = int(args.N)
     N = args.N
     T = args.T
@@ -153,7 +156,7 @@ def build_run_sim(rktest_int, rk_name, args, out_fold, run=True):
     popfile = get_people_file(seed, N)
     period_save = args.n_days_save
 
-    analyz = [analysis.store_seir(),
+    analyz = [analysis.store_seir(**args_analy),
     lambda sim: save_data(sim, period_save,  args, rk_name, out_fold, args.start_day)]
     ct = covasim.contact_tracing(trace_probs=.4, trace_time=1, start_day=10)
 
