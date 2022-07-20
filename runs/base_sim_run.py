@@ -67,7 +67,7 @@ def get_people_file(seed, n, verbose=True):
     pare = Path(__file__).parent
     if verbose: print(pare)
     p = pare/Path("../runs/pops")
-    f = p / f"kc_rnr_{int(n/1000)}k_seed{int(seed % 50)}.ppl"
+    f = p / f"kc_rnr_{int(n/1000)}k_seed{int(seed)}.ppl"
     return f
 
 def create_parser():
@@ -241,7 +241,14 @@ def save_sim_results(sim, args, rk_name, out_fold):
          )
     
     save_dict.update(arrs_save)
-
+    
+    ## Add the sim results to the arrays saved in the stats.npz
+    if sim.results_ready:
+        z = {k: np.array(v) for k,v in sim.results.items()}
+        del z["variant"]
+        sim_res = pd.DataFrame(z).to_records(index=False)
+        arrs_save["sim_res"] = sim_res
+        print("Saving sim results")
    
     out_fold = check_save_folder(out_fold)
     fnr_str = ""
