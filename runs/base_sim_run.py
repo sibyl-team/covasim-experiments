@@ -96,6 +96,8 @@ def create_parser():
     parser.add_argument("--test_delay", type=int, default=0, help="Delay in delivering the tests (in days)")
     parser.add_argument("--p_loss", type=float, default=0., help="Probability of losing a test result")
 
+    parser.add_argument("--save_rank", type=int, default=-10, help="Number of the ranking at each time step to save, set to a value >0")
+
     return parser
 
 def check_save_folder(fold, create=True):
@@ -141,6 +143,10 @@ def make_interv_new(ranker, rk_name, args, **kwargs):
                                 symp_test_p=0.5,
                                 **pars
                                 )
+    if args.save_rank > 0:
+        rktest_int.set_extra_stats_fn(
+            lambda sim,rank,ll: rank.sort_values(ascending=False)[:args.save_rank]
+        )
     return rktest_int
 
 def build_run_sim(rktest_int, rk_name, args, out_fold, run=True, args_analy=None):
@@ -208,6 +214,8 @@ def save_sim_results(sim, args, rk_name, out_fold):
         return x
     inf_log = pd.DataFrame(map(pars_log, 
             sim.people.infection_log)).to_records(index=False)
+
+    ### ranker data
     rdata = dict(testranker.ranker_data)
 
     arrs_save = dict()
@@ -249,6 +257,20 @@ def save_sim_results(sim, args, rk_name, out_fold):
         sim_res = pd.DataFrame(z).to_records(index=False)
         arrs_save["sim_res"] = sim_res
         print("Saving sim results")
+    
+    if testranker.extra_stats:
+        ex_st = testranker.extra_stats
+        save_dict["rk_extra_stats"] = testranker.extra_stats
+
+        if isinstance(next(iter(ex_st.values())), pd.Series):
+            ### transform to array for npz
+            out_arr ={}
+            for key,v in ex_st.items():
+                out_arr[key] = np.fromiter(zip(v.index,v.values), 
+                        dtype=[("idx",v.index.dtype),("val",v.values.dtype)])
+        else:
+            out_arr = ex_st
+        arrs_save["rk_extra_stats"] = out_arr
    
     out_fold = check_save_folder(out_fold)
     fnr_str = ""
