@@ -35,7 +35,7 @@ FULL_ISO_PARS={
     "iso_factor": {k: 0. for k in LAYERS_KEYS}
 }
 
-def make_std_pars(N=N_PEOPLE, T=100,seed=1, dynamic_layers=["w","c"], full_iso=False):
+def make_std_pars(N=N_PEOPLE, T=100,seed=1, dynamic_layers=["w","c"], full_iso=False, quar_fact=1.):
     N=int(N)
     pars_sim={  'pop_size'      : N,
                 'pop_scale'     : 1,
@@ -54,7 +54,10 @@ def make_std_pars(N=N_PEOPLE, T=100,seed=1, dynamic_layers=["w","c"], full_iso=F
     #pars_sim_test["n_days"] = 60
     pars_sim_test["dynam_layer"] = {k:1 for k in dynamic_layers}
 
-    pars_sim_test.update(PARS_no_quar_red)
+    #pars_sim_test.update(PARS_no_quar_red)
+    pars_sim_test["quar_factor"] ={
+        k: quar_fact for k in ["h","s","c","w","l"]
+    }
     
     if full_iso:
         pars_sim_test.update(FULL_ISO_PARS)
@@ -90,6 +93,7 @@ def create_parser():
     parser.add_argument("--fold_save", type=str, default="", help="Saving folder")
 
     parser.add_argument("--full_iso", action="store_true", help="Test with full isolation")
+    parser.add_argument("--quar_factor", type=float, default=1., help="Effective infectivity reduction in quarantine, 1=> no reduction")
 
     parser.add_argument("--fnr", type=float, default=0., help="False negative test rate")
     parser.add_argument("--fpr", type=float, default=0., help="False positive rate of testing")
@@ -141,6 +145,7 @@ def make_interv_new(ranker, rk_name, args, **kwargs):
                                 num_tests=args.nt_algo+args.nt_rand,
                                 logger=dummy_logger(),
                                 symp_test_p=0.5,
+                                quar_factor=args.quar_factor
                                 **pars
                                 )
     if args.save_rank > 0:
