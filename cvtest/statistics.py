@@ -1,3 +1,4 @@
+from collections import defaultdict
 import numpy as np
 
 def get_rank_forw_back(ranks_t, test_stats, inf_log):
@@ -51,3 +52,26 @@ def get_rank_forw_back(ranks_t, test_stats, inf_log):
 
     return dict(forward=counts_for, backward=counts_back)
     #counts_for, counts_back
+
+def find_infection_counts(tt):
+    newhist = defaultdict(list)
+    counts = defaultdict(lambda: 0)
+    detailed = tt.detailed.to_dict('records')
+    for i,entry in enumerate(detailed):
+        if ~np.isnan(entry['target']):
+            idx_tg = int(entry["target"])
+            if idx_tg in newhist:
+                raise ValueError()
+            newhist[idx_tg] = [idx_tg]
+            source = entry['source']
+            lastsrc=-1
+            while ~np.isnan(source) and source > 0:
+                lastsrc = int(source)
+                newhist[i].insert(0, lastsrc)
+                source = detailed[lastsrc]['source']
+            if lastsrc > 0:
+                counts[lastsrc]+=1
+            else:
+                counts[idx_tg]+=1
+
+    return newhist, counts
