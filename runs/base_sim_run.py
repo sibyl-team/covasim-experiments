@@ -145,7 +145,7 @@ def make_interv_new(ranker, rk_name, args, **kwargs):
                                 num_tests=args.nt_algo+args.nt_rand,
                                 logger=dummy_logger(),
                                 symp_test_p=0.5,
-                                quar_factor=args.quar_factor
+                                quar_factor=args.quar_factor,
                                 **pars
                                 )
     if args.save_rank > 0:
