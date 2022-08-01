@@ -93,7 +93,6 @@ def create_parser():
     parser.add_argument("--fold_save", type=str, default="", help="Saving folder")
 
     parser.add_argument("--full_iso", action="store_true", help="Test with full isolation")
-    parser.add_argument("--quar_factor", type=float, default=1., help="Effective infectivity reduction in quarantine, 1=> no reduction")
 
     parser.add_argument("--fnr", type=float, default=0., help="False negative test rate")
     parser.add_argument("--fpr", type=float, default=0., help="False positive rate of testing")
@@ -101,6 +100,12 @@ def create_parser():
     parser.add_argument("--p_loss", type=float, default=0., help="Probability of losing a test result")
 
     parser.add_argument("--save_rank", type=int, default=-10, help="Number of the ranking at each time step to save, set to a value >0")
+
+    ##internal contact tracing
+    parser.add_argument("--quar_factor", type=float, default=1., help="Effective infectivity reduction in quarantine, 1=> no reduction")
+    parser.add_argument("--ct_trace_time", type=int, default=0, help="Time taken to quarantine people with internal contact tracing")
+
+    parser.add_argument("--ct_trace_p", type=float, default=0.5, help="Probability of individual quarantined through contact tracing")
 
     return parser
 
@@ -169,7 +174,7 @@ def build_run_sim(rktest_int, rk_name, args, out_fold, run=True, args_analy=None
 
     analyz = [analysis.store_seir(**args_analy),
     lambda sim: save_data(sim, period_save,  args, rk_name, out_fold, args.start_day)]
-    ct = covasim.contact_tracing(trace_probs=.4, trace_time=1, start_day=10)
+    ct = covasim.contact_tracing(trace_probs=args.ct_trace_p, trace_time=args.ct_trace_time, start_day=args.start_day)
 
     sim = covasim.Sim(pars=params, interventions=[rktest_int, ct],
         popfile=popfile,
