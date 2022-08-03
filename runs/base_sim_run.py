@@ -9,6 +9,7 @@ import sciris as sc
 import covasim 
 from covasibyl import ranktest, ranktestnew
 from covasibyl import analyzers as analysis
+from covasibyl.utils import get_git_revision_hash as covasibyl_git_hash
 
 import subprocess
 
@@ -167,7 +168,9 @@ def build_run_sim(rktest_int, rk_name, args, out_fold, run=True, args_analy=None
     N = args.N
     T = args.T
     seed = args.seed
-    args.git_version = {"runfiles": get_git_revision_hash()}
+    args.git_version = {"runfiles": get_git_revision_hash(),
+        "covasibyl": covasibyl_git_hash()
+    }
     params = make_std_pars(N,T, seed=seed, full_iso=args.full_iso)
     popfile = get_people_file(seed, N)
     period_save = args.n_days_save
@@ -250,6 +253,14 @@ def save_sim_results(sim, args, rk_name, out_fold):
 
     if sim.results_ready:
         tt = sim.make_transtree()
+
+        ## save dates of people
+        peop = sim.people
+        dates_save=np.rec.fromarrays((peop.date_exposed, peop.date_infectious, peop.date_symptomatic, 
+                                peop.date_diagnosed, peop.date_recovered, peop.date_dead),
+                  names=("date_exposed", "date_infectious", "date_symptomatic", "date_diagnosed", "date_recovered", "date_dead")
+             )
+        arrs_save["people_dates"] = dates_save
     else:
         tt = []
     
