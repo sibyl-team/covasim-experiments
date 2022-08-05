@@ -171,7 +171,7 @@ def build_run_sim(rktest_int, rk_name, args, out_fold, run=True, args_analy=None
     args.git_version = {"runfiles": get_git_revision_hash(),
         "covasibyl": covasibyl_git_hash()
     }
-    params = make_std_pars(N,T, seed=seed, full_iso=args.full_iso)
+    params = make_std_pars(N,T, seed=seed, full_iso=args.full_iso,quar_fact=args.quar_factor)
     popfile = get_people_file(seed, N)
     period_save = args.n_days_save
 
