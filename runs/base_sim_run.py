@@ -110,7 +110,20 @@ def create_parser():
 
     parser.add_argument("--ct_exclude", type=str, default="", help="Layers to exclude for the contact tracing")
 
+    # Arguments for superspreader analysis
+    parser.add_argument("--mitigate", type=bool, default=True, help="Set to False if you don't want an intervention")
+
+    parser.add_argument("--rand_obs",action="store_true", help="Give only random observations")
+    parser.add_argument("--sympt_obs",action="store_true", help="Give only symptomatic individuals as observations")
+
     return parser
+
+def check_args(args):
+    # Fix some args
+    if args.rand_obs:
+        args.mitigate=False
+    if args.sympt_obs:
+        args.mitigate=False
 
 def check_save_folder(fold, create=True):
     p = Path(fold)
@@ -132,7 +145,7 @@ interv_args_def=lambda args: dict(
     specificity=1-args.fpr,
     start_day=args.start_day,
     loss_prob=args.p_loss,
-    test_delay=args.test_delay
+    test_delay=args.test_delay,
     )
 def make_interv(ranker, rk_name, args, **kwargs):
     pars = interv_args_def(args)
@@ -149,6 +162,10 @@ def make_interv(ranker, rk_name, args, **kwargs):
 def make_interv_new(ranker, rk_name, args, **kwargs):
     pars = interv_args_def(args)
     pars.update(kwargs)
+    pars["mitigate"] = args.mitigate
+    if args.rand_obs:
+        pars["only_random_tests"] = True
+    pars["only_sympt"] = args.sympt_obs
     rktest_int = ranktestnew.RankTester(ranker, f"{rk_name} ranker",
                                 num_tests=args.nt_algo+args.nt_rand,
                                 logger=dummy_logger(),

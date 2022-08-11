@@ -52,6 +52,8 @@ if __name__ == "__main__":
     parser.add_argument("--delta",type=int, default=3, help="Delta for the MF ranker")
 
     args = parser.parse_args()
+    base_sim.check_args(args)
+
     print("Arguments:")
     print("\t",args)
 

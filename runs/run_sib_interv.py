@@ -106,6 +106,8 @@ if __name__ == "__main__":
     parser.add_argument("--prec_exact", action="store_true")
 
     args = parser.parse_args()
+    base.check_args(args)
+    
     print("Arguments:")
     print("\t",args)
     seed = args.seed
