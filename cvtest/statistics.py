@@ -1,7 +1,7 @@
 from collections import defaultdict
 import numpy as np
 
-def get_rank_forw_back(ranks_t, test_stats, inf_log):
+def get_rank_forw_back(ranks_t, test_stats, inf_log, n_ranking=100):
     """
     Find the number of infections a ranker is able to 
     find, either backward or forward in the transmission tree,
@@ -14,7 +14,6 @@ def get_rank_forw_back(ranks_t, test_stats, inf_log):
     """
     counts_back = {}
     counts_for = {}
-    n_ranking = 100
     discovered = set()
     pos_tests = test_stats[test_stats["res_state"]==1]
     ## another version
@@ -75,3 +74,13 @@ def find_infection_counts(tt):
                 counts[idx_tg]+=1
 
     return newhist, counts
+
+def get_sim_res_all(allres, key, seeds):
+    vmean = []
+    for s in seeds:
+        x = allres[s]["sim_res"][key]
+        if hasattr(x,"values"):
+            x = x.values
+        vmean.append(x)
+    vmean = np.stack(vmean)
+    return vmean
