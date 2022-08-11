@@ -108,6 +108,8 @@ def create_parser():
 
     parser.add_argument("--ct_trace_p", type=float, default=0.5, help="Probability of individual quarantined through contact tracing")
 
+    parser.add_argument("--ct_exclude", type=str, default="", help="Layers to exclude for the contact tracing")
+
     return parser
 
 def check_save_folder(fold, create=True):
@@ -115,7 +117,7 @@ def check_save_folder(fold, create=True):
     if not p.exists():
         print(f"PROBLEM: folder of {fold} does NOT exist ")
         if create:
-            p.mkdir(parents=True)
+            p.mkdir(parents=True, exist_ok=True)
     return p
 
 def save_data(sim, period,  args, rk_name, out_fold, start_day):
@@ -177,7 +179,12 @@ def build_run_sim(rktest_int, rk_name, args, out_fold, run=True, args_analy=None
 
     analyz = [analysis.store_seir(**args_analy),
     lambda sim: save_data(sim, period_save,  args, rk_name, out_fold, args.start_day)]
-    ct = covasim.contact_tracing(trace_probs=args.ct_trace_p, trace_time=args.ct_trace_time, start_day=args.start_day)
+
+    ct_probs = {k:args.ct_trace_p for k in 'hswlc'}
+    for l in args.ct_exclude:
+        ct_probs[l] = 0
+    print(f"Contact tracing probs: {ct_probs}")
+    ct = covasim.contact_tracing(trace_probs=ct_probs, trace_time=args.ct_trace_time, start_day=args.start_day)
 
     sim = covasim.Sim(pars=params, interventions=[rktest_int, ct],
         popfile=popfile,
