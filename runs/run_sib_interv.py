@@ -147,7 +147,7 @@ if __name__ == "__main__":
         tau=0,
         fnr=fn_rate,
         fpr=fp_rate,
-        debug_times=args.debug_c,
+        #debug_times=args.debug_c,
 
     )
     interv = base.make_interv_new(ranker, rk_name, args)
