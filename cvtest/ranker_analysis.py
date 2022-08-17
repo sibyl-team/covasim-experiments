@@ -1,6 +1,7 @@
 from collections import defaultdict
 from warnings import warn
 import numpy as np
+from pandas import Series
 
 def get_rank_forw_back(ranks_t, test_stats, inf_log, n_ranking=100):
     """
@@ -94,9 +95,14 @@ def count_superspread(infect_log,ranks_day, tests_stats, ninf_super=11, n_ranks=
 
     inf_obs = tests_stats[tests_stats["res_state"]==1]
     supsp_obs=inf_obs[np.isin(inf_obs["i"], superspread)]
+    
+    v=infect_log[np.isin(infect_log["target"], superspread)]
+    sups_date = Series(index=v["target"],data=v["date"])
 
     found = {}
     ids = set()
+    found_perf ={}
+    _f_ids = set()
     for d, rk in ranks_day.items():
         try:
             it = rk[:n_ranks].sort_values(descending=False).index
@@ -109,9 +115,16 @@ def count_superspread(infect_log,ranks_day, tests_stats, ninf_super=11, n_ranks=
         newfound = set(u).difference(ids)
         #print(u, newfound, ids)
         #print(d,len(u))
-        found[d] = newfound#np.array(newfound)
+        found[d] = newfound
         ids.update(u)
         #print(d, len(ids))
+
+        ## perfect identification: find it as soon as it's infected
+        dt=sups_date.loc[superspread]
+        i_perf=dt[dt < d].index
+        f_p = set(i_perf).difference(_f_ids)
+        found_perf[d] = f_p
+        _f_ids.update(f_p)
         
         ### remove obs superspreaders
         irem= supsp_obs[ supsp_obs["date_res"] == d]["i"]
@@ -120,4 +133,4 @@ def count_superspread(infect_log,ranks_day, tests_stats, ninf_super=11, n_ranks=
             superspread = np.setdiff1d(superspread, irem)
             #print(superspread)
     
-    return found, ids
+    return found, ids, found_perf, _f_ids
