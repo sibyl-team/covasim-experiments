@@ -1,4 +1,5 @@
 from collections import defaultdict
+from warnings import warn
 import numpy as np
 
 def get_rank_forw_back(ranks_t, test_stats, inf_log, n_ranking=100):
@@ -84,3 +85,39 @@ def get_sim_res_all(allres, key, seeds):
         vmean.append(x)
     vmean = np.stack(vmean)
     return vmean
+
+def count_superspread(infect_log,ranks_day, tests_stats, ninf_super=11, n_ranks=100):
+    infectors, n_infected=np.unique(infect_log.source[infect_log.source>=0], return_counts=True)
+
+    superspread=infectors[n_infected>= ninf_super] 
+    #pd.Series(data=n_infected, index=infectors)
+
+    inf_obs = tests_stats[tests_stats["res_state"]==1]
+    supsp_obs=inf_obs[np.isin(inf_obs["i"], superspread)]
+
+    found = {}
+    ids = set()
+    for d, rk in ranks_day.items():
+        try:
+            it = rk[:n_ranks].sort_values(descending=False).index
+        except AttributeError:
+            ### we have a numpy array
+            ii = np.argsort(rk["val"])[::-1]
+            it = rk["idx"][ii][:n_ranks]
+
+        u = np.intersect1d(it,superspread)
+        newfound = set(u).difference(ids)
+        #print(u, newfound, ids)
+        #print(d,len(u))
+        found[d] = newfound#np.array(newfound)
+        ids.update(u)
+        #print(d, len(ids))
+        
+        ### remove obs superspreaders
+        irem= supsp_obs[ supsp_obs["date_res"] == d]["i"]
+        if len(irem) > 0: 
+            #print(f"day {d}, remove {irem} from supsp",superspread)
+            superspread = np.setdiff1d(superspread, irem)
+            #print(superspread)
+    
+    return found, ids
