@@ -72,7 +72,10 @@ if __name__ == "__main__":
     #interv.mitigate = False
     #interv._check_epi_tests = True
     #args.prefix +="nomit_rndtest_"
-    args.prefix+="newrk_"
+    try:
+        args.prefix += (interv._comp_flag()+"_")
+    except AttributeError:
+        args.prefix +="newrk_"
 
     
 

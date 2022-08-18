@@ -152,16 +152,20 @@ if __name__ == "__main__":
     )
     interv = base.make_interv_new(ranker, rk_name, args)
 
+
+    #interv.mitigate = False
+    #interv._check_epi_tests = True
+    #args.prefix +="nomit_rndtest_"
+    try:
+        args.prefix += (interv._comp_flag()+"_")
+    except AttributeError:
+        args.prefix +="newrk_"
+    #interv.mitigate = False
+    #interv._check_epi_tests = True
+    #args.prefix +="nomit_rndtest_"
     if args.full_iso:
         interv.iso_cts_strength = 0.
-        args.prefix+="fulliso_"
-    #interv.mitigate = False
-    #interv._check_epi_tests = True
-    #args.prefix +="nomit_rndtest_"
-    args.prefix+="newrk_"
-    #interv.mitigate = False
-    #interv._check_epi_tests = True
-    #args.prefix +="nomit_rndtest_"
+        args.prefix+="fiso_"
     
     sib.set_num_threads(args.n_cores)
 
