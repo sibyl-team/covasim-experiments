@@ -97,6 +97,7 @@ def create_parser():
 
     parser.add_argument("--fnr", type=float, default=0., help="False negative test rate")
     parser.add_argument("--fpr", type=float, default=0., help="False positive rate of testing")
+    parser.add_argument("-AF","--adopt_fraction", type=float, default=1., help="Fraction of people who report the contacts")
     parser.add_argument("--test_delay", type=int, default=0, help="Delay in delivering the tests (in days)")
     parser.add_argument("--p_loss", type=float, default=0., help="Probability of losing a test result")
 
@@ -115,6 +116,7 @@ def create_parser():
 
     parser.add_argument("--rand_obs",action="store_true", help="Give only random observations")
     parser.add_argument("--sympt_obs",action="store_true", help="Give only symptomatic individuals as observations")
+
 
     return parser
 
@@ -171,6 +173,7 @@ def make_interv_new(ranker, rk_name, args, **kwargs):
                                 logger=dummy_logger(),
                                 symp_test_p=0.5,
                                 quar_factor=args.quar_factor,
+                                adoption_fraction=args.adopt_fraction,
                                 **pars
                                 )
     if args.save_rank > 0:
@@ -316,14 +319,9 @@ def save_sim_results(sim, args, rk_name, out_fold):
         else:
             out_arr = ex_st
         arrs_save["rk_extra_stats"] = out_arr
-   
+
     out_fold = check_save_folder(out_fold)
-    fnr_str = ""
-    if args.fnr > 0:
-        fnr_str+=f"_fnr_{round(args.fnr,3)}"
-    if args.fpr > 0:
-        fnr_str+=f"_fpr_{round(args.fpr,3)}"
-    savefile_name = args.prefix +f"epi_kc_{int(N/1000)}k_T_{T}{fnr_str}_s_{seed}_rk_{rk_name}"
+    savefile_name = make_filename(args, N, T, seed, rk_name)
     print("Saving results to: ", out_fold, savefile_name)
     sc.saveobj(out_fold / f"{savefile_name}_res.pkl", save_dict)
     np.savez_compressed(out_fold / f"{savefile_name}_stats.npz", **arrs_save)
@@ -331,3 +329,16 @@ def save_sim_results(sim, args, rk_name, out_fold):
     args_d = vars(args)
 
     sc.savejson(out_fold / f"{savefile_name}_args.json", args_d)
+
+def make_filename(args, N:int,T:int,seed:int, rk_name:str):
+    fnr_str = ""
+    if args.adopt_fraction < 1:
+        fnr_str+=f"_AF_{round(args.adopt_fraction,2)}"
+    if args.fnr > 0:
+        fnr_str+=f"_fnr_{round(args.fnr,3)}"
+    if args.fpr > 0:
+        fnr_str+=f"_fpr_{round(args.fpr,3)}"   
+
+    savefile_name = args.prefix +f"epi_kc_{int(N/1000)}k_T_{T}{fnr_str}_s_{seed}_rk_{rk_name}"
+
+    return savefile_name
