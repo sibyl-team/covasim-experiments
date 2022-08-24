@@ -110,6 +110,7 @@ def create_parser():
     parser.add_argument("--ct_trace_p", type=float, default=0.5, help="Probability of individual quarantined through contact tracing")
 
     parser.add_argument("--ct_exclude", type=str, default="", help="Layers to exclude for the contact tracing")
+    parser.add_argument("--noct_c", action="store_true", help="Exlude random contacts from contact tracing intervention")
 
     # Arguments for superspreader analysis
     parser.add_argument("--mitigate", type=bool, default=True, help="Set to False if you don't want an intervention")
@@ -126,6 +127,8 @@ def check_args(args):
         args.mitigate=False
     if args.sympt_obs:
         args.mitigate=False
+    if args.noct_c:
+        args.ct_exclude+="c"
 
 def check_save_folder(fold, create=True):
     p = Path(fold)
