@@ -101,6 +101,8 @@ def create_parser():
     parser.add_argument("--test_delay", type=int, default=0, help="Delay in delivering the tests (in days)")
     parser.add_argument("--p_loss", type=float, default=0., help="Probability of losing a test result")
 
+    parser.add_argument("--rk_p_test",type=float, default=-2., dest="rank_p_test",
+                help="Threshold test probability to run rankers with an unlimited number of tests (if <=0, use num_tests)")
     parser.add_argument("--save_rank", type=int, default=-10, help="Number of the ranking at each time step to save, set to a value >0")
 
     ##internal contact tracing
@@ -171,14 +173,26 @@ def make_interv_new(ranker, rk_name, args, **kwargs):
     if args.rand_obs:
         pars["only_random_tests"] = True
     pars["only_sympt"] = args.sympt_obs
-    rktest_int = ranktestnew.RankTester(ranker, f"{rk_name} ranker",
-                                num_tests=args.nt_algo+args.nt_rand,
-                                logger=dummy_logger(),
-                                symp_test_p=0.5,
-                                quar_factor=args.quar_factor,
-                                adoption_fraction=args.adopt_fraction,
-                                **pars
-                                )
+    args_rknew=dict(
+        logger=dummy_logger(),
+        symp_test_p=0.5,
+        quar_factor=args.quar_factor,
+        adoption_fraction=args.adopt_fraction,
+    )
+    pars.update(args_rknew)
+    if args.rank_p_test > 0:
+        print(f"Using probabilistic ranker with thresh p: {args.rank_p_test}")
+        rktest_int = ranktestnew.ProbRankTester(ranker,
+            f"{rk_name} ranker",
+            p_contain=args.rank_p_test,
+            **pars
+        )
+    else:
+        rktest_int = ranktestnew.RankTester(ranker, 
+                f"{rk_name} ranker",
+                num_tests=args.nt_algo+args.nt_rand,
+                **pars
+        )
     if args.save_rank > 0:
         rktest_int.set_extra_stats_fn(
             lambda sim,rank,ll: rank.sort_values(ascending=False)[:args.save_rank]
