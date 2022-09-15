@@ -116,11 +116,16 @@ def create_parser():
 
     # Arguments for superspreader analysis
     parser.add_argument("--mitigate", type=bool, default=True, help="Set to False if you don't want an intervention")
+    parser.add_argument("--symp_p_t", type=float, default=0.5, help="Probability of testing a symptomatic individual, default=0.5")
 
     parser.add_argument("--rand_obs",action="store_true", help="Give only random observations")
     parser.add_argument("--sympt_obs",action="store_true", help="Give only symptomatic individuals as observations")
 
+    # Contacts saving
 
+    parser.add_argument("--save_contacts", type=str, default="", help='''Decide available contacts to save. 
+Put "all" to save all available, "EI" for the ones from/to infected and exposed individuals 
+''')
     return parser
 
 def check_args(args):
@@ -157,6 +162,8 @@ interv_args_def=lambda args: dict(
 def make_interv(ranker, rk_name, args, **kwargs):
     pars = interv_args_def(args)
     pars.update(kwargs)
+    if np.abs(args.symp_p_t - 0.5) >1e-10:
+        raise NotImplementedError("Cannot run old ranker with equivalent prob of sympt != 0.5")
     rktest_int = ranktest.RankTester(ranker, f"{rk_name} ranker",
                                 num_tests_algo=args.nt_algo,
                                 num_tests_rand=args.nt_rand,
@@ -175,7 +182,7 @@ def make_interv_new(ranker, rk_name, args, **kwargs):
     pars["only_sympt"] = args.sympt_obs
     args_rknew=dict(
         logger=dummy_logger(),
-        symp_test_p=0.5,
+        symp_test_p=args.symp_p_t,
         quar_factor=args.quar_factor,
         adoption_fraction=args.adopt_fraction,
     )
@@ -214,8 +221,20 @@ def build_run_sim(rktest_int, rk_name, args, out_fold, run=True, args_analy=None
     popfile = get_people_file(seed, N)
     period_save = args.n_days_save
 
+
     analyz = [analysis.store_seir(**args_analy),
     lambda sim: save_data(sim, period_save,  args, rk_name, out_fold, args.start_day)]
+    save_cts = args.save_contacts
+    if args.save_contacts is not None and args.save_contacts!="":
+        print("SAVING CONTACTS, THIS MAY USE A HUGE AMOUNT OF MEMORY!!")
+        if args.save_contacts == "all":
+            save_cts=""
+        ct_saver = analysis.ContactsSaver(quar_factor=args.quar_factor,
+        iso_factor=params["iso_factor"]["h"],
+        start_day=args.start_day-1, save_only=save_cts,
+        every_day=True,
+        )
+        analyz.insert(1, ct_saver)
 
     ct_probs = {k:args.ct_trace_p for k in 'hswlc'}
     for l in args.ct_exclude:
@@ -321,6 +340,8 @@ def save_sim_results(sim, args, rk_name, out_fold):
         del z["variant"]
         sim_res = pd.DataFrame(z).to_records(index=False)
         arrs_save["sim_res"] = sim_res
+
+        arrs_save["tt_detailed"] = tt.detailed.to_records(index=False)
         print("Saving sim results")
     
     if testranker.extra_stats:
@@ -347,6 +368,12 @@ def save_sim_results(sim, args, rk_name, out_fold):
 
     sc.savejson(out_fold / f"{savefile_name}_args.json", args_d)
 
+    if args.save_contacts is not None and args.save_contacts!="":
+        ct_saver=sim["analyzers"][1]
+        assert isinstance(ct_saver, analysis.ContactsSaver)
+        cts=ct_saver.contacts_saved
+        np.savez_compressed(out_fold / f"{savefile_name}_contacts.npz", **{f"cts_{d}": data for d,data in cts.items()})
+
 def make_filename(args, N:int,T:int,seed:int, rk_name:str):
     fnr_str = ""
     if args.adopt_fraction < 1:
@@ -354,7 +381,9 @@ def make_filename(args, N:int,T:int,seed:int, rk_name:str):
     if args.fnr > 0:
         fnr_str+=f"_fnr_{round(args.fnr,3)}"
     if args.fpr > 0:
-        fnr_str+=f"_fpr_{round(args.fpr,3)}"   
+        fnr_str+=f"_fpr_{round(args.fpr,3)}"
+    if np.abs(args.symp_p_t - 0.5) > 1e-10:
+        fnr_str+=f"_psym_{round(args.symp_p_t,3)}"
 
     savefile_name = args.prefix +f"epi_kc_{int(N/1000)}k_T_{T}{fnr_str}_s_{seed}_rk_{rk_name}"
 
