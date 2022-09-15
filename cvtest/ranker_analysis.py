@@ -99,38 +99,42 @@ def count_superspread(infect_log,ranks_day, tests_stats, ninf_super=11, n_ranks=
     v=infect_log[np.isin(infect_log["target"], superspread)]
     sups_date = Series(index=v["target"],data=v["date"])
 
-    found = {}
-    ids = set()
-    found_perf ={}
-    _f_ids = set()
+    
+    day_rank=Series(np.ones(len(superspread),dtype=int)*-200,index=superspread)
+    day_perfect= sups_date+1
+    day_perfect[day_perfect<min(ranks_day.keys())] = min(ranks_day.keys())
+    # find min obs time for supersp
+    day_o={}
+    for r in supsp_obs:
+        i,t=(r.i, r.date_res)
+        if i not in day_o:
+            day_o[i] =t 
+        else:
+            day_o[i] = min(t,day_o[i])
+    ### convert to series for easier access
+    day_obs = Series(day_o)
+
     for d, rk in ranks_day.items():
         try:
-            it = rk[:n_ranks].sort_values(descending=False).index
+            it = rk.sort_values(ascending=False)[:n_ranks].index
         except AttributeError:
             ### we have a numpy array
+            ## sort by val, reverse
             ii = np.argsort(rk["val"])[::-1]
+            # apply order to idx and take first 
             it = rk["idx"][ii][:n_ranks]
 
-        u = np.intersect1d(it,superspread)
-        newfound = set(u).difference(ids)
-        #print(u, newfound, ids)
-        #print(d,len(u))
-        found[d] = newfound
-        ids.update(u)
-        #print(d, len(ids))
+        #supersp to find
+        su_find = day_rank[day_rank<0].index
+        #supersp not obs yet
+        i_notf = day_obs[day_obs>=d].index
+        su_find = np.setdiff1d(su_find,i_notf)
+        # find the supersp that are in the ranking
+        found_b = np.isin(su_find, it)
+        idc_found=su_find[found_b]
+        ## set the day of the ranking
+        day_rank[idc_found] = d
 
-        ## perfect identification: find it as soon as it's infected
-        dt=sups_date.loc[superspread]
-        i_perf=dt[dt < d].index
-        f_p = set(i_perf).difference(_f_ids)
-        found_perf[d] = f_p
-        _f_ids.update(f_p)
-        
-        ### remove obs superspreaders
-        irem= supsp_obs[ supsp_obs["date_res"] == d]["i"]
-        if len(irem) > 0: 
-            #print(f"day {d}, remove {irem} from supsp",superspread)
-            superspread = np.setdiff1d(superspread, irem)
-            #print(superspread)
+    #print("Found:",(day_rank>=0).sum())
     
-    return found, ids, found_perf, _f_ids
+    return day_rank, day_perfect
