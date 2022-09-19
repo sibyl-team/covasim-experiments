@@ -1,7 +1,7 @@
 from collections import defaultdict
 from warnings import warn
 import numpy as np
-from pandas import Series
+from pandas import Series, DataFrame
 
 def get_rank_forw_back(ranks_t, test_stats, inf_log, n_ranking=100):
     """
@@ -138,3 +138,67 @@ def count_superspread(infect_log,ranks_day, tests_stats, ninf_super=11, n_ranks=
     #print("Found:",(day_rank>=0).sum())
     
     return day_rank, day_perfect
+
+def pars_infect_log(x):
+        if x["source"] is None:
+            x["source"] = -1
+        return x
+
+def find_supersp_sim_old(sim,  ninf_super=8,n_ranks=100, **kwargs):
+    inf_log = DataFrame(map(pars_infect_log, 
+            sim.people.infection_log)).to_records(index=False)
+
+    idc_d=sim.people.diagnosed.nonzero()[0]
+
+    date_d=sim.people.date_diagnosed[idc_d]
+
+    #test_data =np.fromiter(zip(idc_d, date_d, np.ones(len(idc_d),dtype=int)), 
+    #           dtype=np.dtype([("i",int),("date_res",int), ("res_state",int)]))
+    test_data = np.rec.fromarrays((idc_d, date_d.astype(int), np.ones(len(idc_d),dtype=int)),
+                      names=["i","date_res","res_state"])
+
+    ranks=sim["interventions"][0].probs_test_saved
+
+    e=count_superspread(inf_log, ranks,
+                                           test_data, ninf_super=ninf_super,n_ranks=n_ranks,
+                                          )
+    
+    infectors, n_infected=np.unique(inf_log.source[inf_log.source>=0], return_counts=True)
+        
+
+    ss=infectors[n_infected>= ninf_super]
+
+
+    return e
+
+def find_supersp_sim_tests(sim,  ninf_super=8,):
+    inf_log = DataFrame(map(pars_infect_log, 
+            sim.people.infection_log)).to_records(index=False)
+
+    idc_d=sim.people.diagnosed.nonzero()[0]
+
+    date_d=sim.people.date_diagnosed[idc_d]
+
+    #test_data =np.fromiter(zip(idc_d, date_d, np.ones(len(idc_d),dtype=int)), 
+    #           dtype=np.dtype([("i",int),("date_res",int), ("res_state",int)]))
+    test_data = np.rec.fromarrays((idc_d, date_d.astype(int), np.ones(len(idc_d),dtype=int)),
+                      names=["i","date_res","res_state"])
+
+    tested=sim["interventions"][0].tested_idcs_rnd
+    
+    infectors, n_infected=np.unique(inf_log.source[inf_log.source>=0], return_counts=True)
+    superspread=infectors[n_infected>= ninf_super]
+
+    day_rank=Series(np.full(len(superspread),-200),index=superspread)
+
+    for d,tt in tested.items():
+        pos_t=test_data[test_data["date_res"]<d]
+        ## choose only the superspreaders
+        ss_find = np.intersect1d(tt,superspread)
+        ## remove those already found infected
+        for i in np.setdiff1d(ss_find, pos_t[pos_t["res_state"]==1]["i"]):
+            #print(i)
+            
+            day_rank[i] = d if day_rank[i] == -200 else max(d,day_rank[i])
+
+    return (day_rank,)
