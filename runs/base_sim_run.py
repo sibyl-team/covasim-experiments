@@ -1,4 +1,5 @@
 import argparse
+import json
 from pathlib import Path
 from turtle import update
 
@@ -36,12 +37,12 @@ FULL_ISO_PARS={
     "iso_factor": {k: 0. for k in LAYERS_KEYS}
 }
 
-def make_std_pars(N=N_PEOPLE, T=100,seed=1, dynamic_layers=["w","c"], full_iso=False, quar_fact=1.):
+def make_std_pars(N=N_PEOPLE, T=100,seed=1, dynamic_layers=["w","c"], full_iso=False, quar_fact=1., n_infect=-2):
     N=int(N)
     pars_sim={  'pop_size'      : N,
                 'pop_scale'     : 1,
                 'pop_type'      : 'synthpops',
-                'pop_infected'  : int(300*N/225e3),
+                'pop_infected'  : n_infect if n_infect > 0 else int(300*N/225e3),
                 'beta'          : BETA,
                 "n_days" : T,
                 'rescale'       : False,
@@ -77,7 +78,7 @@ def get_people_file(seed, n, verbose=True):
 def create_parser():
     parser = argparse.ArgumentParser(description='Run simulation with covasim and rankers')
 
-    parser.add_argument("-s","--seed", type=int, default=1, dest="seed")
+    parser.add_argument("-s","--seed", type=int, default=1, dest="seed", help="Random seed")
     parser.add_argument("-N", type=float, default=20e3, dest="N", help="Number of agents")
     parser.add_argument("-T",type=int, default=50, dest="T", help="Number of days to run" )
     parser.add_argument("--prefix", type=str, default="", help="Out file prefix")
@@ -85,6 +86,7 @@ def create_parser():
         help="Number of test per day for the ranking algorithm")
     parser.add_argument("--nt_rand", type=int, default=100, 
         help="Number of random tests per day to find symptomatics")
+    parser.add_argument("--n_sources", type=int, default=-2, help="Number of seed infections")
 
     parser.add_argument("--day_start", default=10, type=int, dest="start_day",
         help="day to start the intervention")
@@ -217,7 +219,11 @@ def build_run_sim(rktest_int, rk_name, args, out_fold, run=True, args_analy=None
     args.git_version = {"runfiles": get_git_revision_hash(),
         "covasibyl": covasibyl_git_hash()
     }
-    params = make_std_pars(N,T, seed=seed, full_iso=args.full_iso,quar_fact=args.quar_factor)
+    params = make_std_pars(N,T, seed=seed,
+            full_iso=args.full_iso,
+            quar_fact=args.quar_factor,
+            n_infect=args.n_sources)
+    print("simulation params:\n\t",json.dumps(params))
     popfile = get_people_file(seed, N)
     period_save = args.n_days_save
 
@@ -242,12 +248,14 @@ def build_run_sim(rktest_int, rk_name, args, out_fold, run=True, args_analy=None
     print(f"Contact tracing probs: {ct_probs}")
     ct = covasim.contact_tracing(trace_probs=ct_probs, trace_time=args.ct_trace_time, start_day=args.start_day)
 
-    sim = covasim.Sim(pars=params, interventions=[rktest_int, ct],
+    sim = covasim.Sim(pars=params,
         popfile=popfile,
         label=f"{rk_name} ranking interv",
         analyzers=analyz,
     )
+    sim["interventions"]=[rktest_int, ct]
 
+    print("Running")
     if run:
         sim.run()
 
@@ -267,8 +275,8 @@ def save_sim_results(sim, args, rk_name, out_fold):
     
     counter = sim["analyzers"][0]
     assert isinstance(counter, analysis.store_seir)
-
     counts_arr = counter.out_save()
+        
 
     #print(pd.DataFrame(testranker.hist[:15]) )
     print(testranker.hist[-1])
@@ -319,9 +327,11 @@ def save_sim_results(sim, args, rk_name, out_fold):
 
         ## save dates of people
         peop = sim.people
-        dates_save=np.rec.fromarrays((peop.date_exposed, peop.date_infectious, peop.date_symptomatic, 
-                                peop.date_diagnosed, peop.date_recovered, peop.date_dead),
-                  names=("date_exposed", "date_infectious", "date_symptomatic", "date_diagnosed", "date_recovered", "date_dead")
+        dates_save=np.rec.fromarrays((peop.date_exposed, peop.date_infectious, 
+                              peop.date_symptomatic, peop.date_severe, peop.date_critical,
+                              peop.date_diagnosed, peop.date_recovered, peop.date_dead),
+                  names=("date_exposed", "date_infectious", "date_symptomatic","date_severe", 
+                        "date_critical", "date_diagnosed", "date_recovered", "date_dead")
              )
         arrs_save["people_dates"] = dates_save
     else:
