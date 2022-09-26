@@ -124,6 +124,9 @@ def create_parser():
     parser.add_argument("--rand_obs",action="store_true", help="Give only random observations")
     parser.add_argument("--sympt_obs",action="store_true", help="Give only symptomatic individuals as observations")
 
+    ## args for forward/backward analysis
+    parser.add_argument("--all_symp_end", action="store_true", help="Observe all symptomatics at the final time")
+
     # Contacts saving
 
     parser.add_argument("--save_contacts", type=str, default="", help='''Decide available contacts to save. 
@@ -189,6 +192,9 @@ def make_interv_new(ranker, rk_name, args, **kwargs):
         quar_factor=args.quar_factor,
         adoption_fraction=args.adopt_fraction,
     )
+    ## forward/backward special case:
+    if args.all_symp_end:
+        args_rknew["symp_test_p"] = lambda sim: 1. if sim.t == (args.T -1) else args.symp_p_t 
     pars.update(args_rknew)
     if args.rank_p_test > 0:
         print(f"Using probabilistic ranker with thresh p: {args.rank_p_test}")
