@@ -96,6 +96,7 @@ def create_parser():
     parser.add_argument("--fold_save", type=str, default="", help="Saving folder")
 
     parser.add_argument("--full_iso", action="store_true", help="Test with full isolation")
+    parser.add_argument("-dl","--dynamic_layer", type=str, default="wc", help="Dynamic layers")
 
     parser.add_argument("--fnr", type=float, default=0., help="False negative test rate")
     parser.add_argument("--fpr", type=float, default=0., help="False positive rate of testing")
@@ -219,10 +220,13 @@ def build_run_sim(rktest_int, rk_name, args, out_fold, run=True, args_analy=None
     args.git_version = {"runfiles": get_git_revision_hash(),
         "covasibyl": covasibyl_git_hash()
     }
+    dynamic_layers = [k for k in args.dynamic_layer]
+    print("Dynamic layers: ",dynamic_layers)
     params = make_std_pars(N,T, seed=seed,
             full_iso=args.full_iso,
             quar_fact=args.quar_factor,
-            n_infect=args.n_sources)
+            n_infect=args.n_sources,
+            dynamic_layers=dynamic_layers)
     print("simulation params:\n\t",json.dumps(params))
     popfile = get_people_file(seed, N)
     period_save = args.n_days_save
