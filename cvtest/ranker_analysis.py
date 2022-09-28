@@ -1,5 +1,6 @@
 from collections import defaultdict
 from warnings import warn
+import warnings
 import numpy as np
 from pandas import Series, DataFrame
 
@@ -13,7 +14,10 @@ def get_rank_forw_back(ranks_t, test_stats, inf_log, n_ranking=100):
     test_stats: all the test statistics from a run
     inf_log: DataFrame of the log of the infections from covasim, 
              !!assuming that seed infections have negative source!!
+
+    DEPRECATED
     """
+    warnings.warn("This method is deprecated", DeprecationWarning)
     counts_back = {}
     counts_for = {}
     discovered = set()
