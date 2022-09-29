@@ -116,6 +116,7 @@ def create_parser():
 
     parser.add_argument("--ct_exclude", type=str, default="", help="Layers to exclude for the contact tracing")
     parser.add_argument("--noct_c", action="store_true", help="Exlude random contacts from contact tracing intervention")
+    parser.add_argument("--ct_p_real", action="store_true", help="Realistic contact tracing probabilities diversified by layer")
 
     # Arguments for superspreader analysis
     parser.add_argument("--mitigate", type=bool, default=True, help="Set to False if you don't want an intervention")
@@ -255,6 +256,9 @@ def build_run_sim(rktest_int, rk_name, args, out_fold, run=True, args_analy=None
     ct_probs = {k:args.ct_trace_p for k in 'hswlc'}
     for l in args.ct_exclude:
         ct_probs[l] = 0
+    if args.ct_p_real:
+        print("Using diversified realistic contact tracing probs")
+        ct_probs = {"h":0.7, "w": 0.2, "s": 0.2, "c": 0., "l": 0.7}
     print(f"Contact tracing probs: {ct_probs}")
     ct = covasim.contact_tracing(trace_probs=ct_probs, trace_time=args.ct_trace_time, start_day=args.start_day)
 
