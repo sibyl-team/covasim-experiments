@@ -211,7 +211,7 @@ def make_interv_new(ranker, rk_name, args, **kwargs):
         )
     if args.save_rank > 0:
         rktest_int.set_extra_stats_fn(
-            lambda sim,rank,ll: rank.sort_values(ascending=False)[:args.save_rank]
+            lambda sim,rank,ll: rank.sort_values(ascending=False).iloc[:args.save_rank]
         )
     return rktest_int
 
