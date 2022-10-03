@@ -30,7 +30,7 @@ def find_idc_forward(inf_log, idc_obsi, idc_ranking, state):
     return forw_I, forw_R
 
 def _count_sideward_contacts(inf_log, contacts, idc_obs, idc_I, debug=False):
-    ctc_sideward = Series(data=[0]*len(idc_I), index=idc_I)
+    ctc_sideward = Series(data=[0]*len(idc_I), index=idc_I, dtype=np.int)
     for i in idc_I:
         src = inf_log[inf_log.target == i].source.iloc[0]
         d = [src]

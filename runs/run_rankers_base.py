@@ -66,7 +66,6 @@ if __name__ == "__main__":
 
     if args.full_iso:
         interv.iso_cts_strength = 0.
-        args.prefix+="fulliso_"
     
     args.prefix+="bmed_"
     #interv.mitigate = False

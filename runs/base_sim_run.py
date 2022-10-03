@@ -119,7 +119,10 @@ def create_parser():
     parser.add_argument("--ct_p_real", action="store_true", help="Realistic contact tracing probabilities diversified by layer")
 
     # Arguments for superspreader analysis
-    parser.add_argument("--mitigate", type=bool, default=True, help="Set to False if you don't want an intervention")
+    parser.add_argument("--mitigate",action="store_true", help="Use intervention, give --no-mitigate if you don't want an intervention")
+    parser.add_argument('--no-mitigate', dest='mitigate', action='store_false')
+    parser.set_defaults(mitigate=True)
+    
     parser.add_argument("--symp_p_t", type=float, default=0.5, help="Probability of testing a symptomatic individual, default=0.5")
 
     parser.add_argument("--rand_obs",action="store_true", help="Give only random observations")

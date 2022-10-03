@@ -165,7 +165,6 @@ if __name__ == "__main__":
     #args.prefix +="nomit_rndtest_"
     if args.full_iso:
         interv.iso_cts_strength = 0.
-        args.prefix+="fiso_"
     
     sib.set_num_threads(args.n_cores)
 
