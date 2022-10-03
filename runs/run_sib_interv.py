@@ -71,7 +71,7 @@ def get_sib_markov_p(beta,p_seed, p_sus, p_autoinf=1e-10):
             pautoinf=p_autoinf)
     return sibPars
 
-def compute_probs_i_r(beta,T):
+def compute_probs_i_r(beta,T, tcut_inf):
 
     pars_nov0=(1.21533407, 3.87484739)
     pars_vlow=(1.04475749, 5.97047953)
@@ -80,7 +80,9 @@ def compute_probs_i_r(beta,T):
     u0 = expit(pars_nov0[0]*(range(T+1) - pars_nov0[1]*np.ones(T+1)))
     u1 = expit(pars_vlow[0]*(range(T+1) - pars_vlow[1]*np.ones(T+1)))
 
-    vact = u0*values_vload[0]+(values_vload[1]-values_vload[0])*u1
+    cutoff = -expit(1.6*(range(T+1) - tcut_inf*np.ones(T+1)))
+
+    vact = u0*values_vload[0]+(values_vload[1]-values_vload[0])*u1 + cutoff*values_vload[1]
 
     gamma_p=(11.40049704552924, 0.8143055827103249)
 
@@ -105,6 +107,8 @@ if __name__ == "__main__":
     parser.add_argument("--debug_c", action="store_true", help="Debug convergence time")
     parser.add_argument("--prec_exact", action="store_true")
 
+    parser.add_argument("--vload_cut", type=int, default=65, help="Day of cutoff of vload")
+
     args = parser.parse_args()
     base.check_args(args)
     
@@ -126,7 +130,7 @@ if __name__ == "__main__":
     else:
         warnings.warn("Using median value for Relative transmission")
         args.prefix+="bmed_"
-        prob_i, prob_r = compute_probs_i_r(BETA_MEDIAN, T)
+        prob_i, prob_r = compute_probs_i_r(BETA_MEDIAN, T, tcut_inf=args.vload_cut)
         if args.prec_exact:
             prob_r = get_prec_exact(T)
         
@@ -147,7 +151,7 @@ if __name__ == "__main__":
         tau=0,
         fnr=fn_rate,
         fpr=fp_rate,
-        #debug_times=args.debug_c,
+        #debug_times=True,
 
     )
     interv = base.make_interv_new(ranker, rk_name, args)
