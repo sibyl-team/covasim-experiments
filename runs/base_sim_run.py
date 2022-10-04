@@ -106,7 +106,7 @@ def create_parser():
 
     parser.add_argument("--rk_p_test",type=float, default=-2., dest="rank_p_test",
                 help="Threshold test probability to run rankers with an unlimited number of tests (if <=0, use num_tests)")
-    parser.add_argument("--save_rank", type=int, default=-10, help="Number of the ranking at each time step to save, set to a value >0")
+    parser.add_argument("--save_rank", type=str, default="", help="Number of the ranking at each time step to save, set to a value >0")
 
     ##internal contact tracing
     parser.add_argument("--quar_factor", type=float, default=1., help="Effective infectivity reduction in quarantine, 1=> no reduction")
@@ -136,6 +136,10 @@ def create_parser():
     parser.add_argument("--save_contacts", type=str, default="", help='''Decide available contacts to save. 
 Put "all" to save all available, "EI" for the ones from/to infected and exposed individuals 
 ''')
+
+    #Development pars
+    parser.add_argument("--give_trel", action="store_true")
+
     return parser
 
 def check_args(args):
@@ -168,6 +172,7 @@ interv_args_def=lambda args: dict(
     start_day=args.start_day,
     loss_prob=args.p_loss,
     test_delay=args.test_delay,
+    give_t_rel=args.give_trel,
     )
 def make_interv(ranker, rk_name, args, **kwargs):
     pars = interv_args_def(args)
@@ -213,6 +218,13 @@ def make_interv_new(ranker, rk_name, args, **kwargs):
                 num_tests=args.nt_algo+args.nt_rand,
                 **pars
         )
+    if args.save_rank != "":
+        if args.save_rank == "all":
+            args.save_rank = int(args.N)
+        else:
+            args.save_rank = int(args.save_rank)
+    else: 
+        args.save_rank = 0
     if args.save_rank > 0:
         rktest_int.set_extra_stats_fn(
             lambda sim,rank,ll: rank.sort_values(ascending=False).iloc[:args.save_rank]
