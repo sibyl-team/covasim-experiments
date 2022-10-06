@@ -37,7 +37,7 @@ FULL_ISO_PARS={
     "iso_factor": {k: 0. for k in LAYERS_KEYS}
 }
 
-def make_std_pars(N=N_PEOPLE, T=100,seed=1, dynamic_layers=["w","c"], full_iso=False, quar_fact=1., n_infect=-2):
+def make_std_pars(N=N_PEOPLE, T=100,seed=1, dynamic_layers=["w","c"], iso_factor=0.1, quar_fact=1., n_infect=-2):
     N=int(N)
     pars_sim={  'pop_size'      : N,
                 'pop_scale'     : 1,
@@ -61,10 +61,10 @@ def make_std_pars(N=N_PEOPLE, T=100,seed=1, dynamic_layers=["w","c"], full_iso=F
         k: quar_fact for k in ["h","s","c","w","l"]
     }
     
-    if full_iso:
-        pars_sim_test.update(FULL_ISO_PARS)
-    else:
-        pars_sim_test["iso_factor"] = {k: 0.1 for k in LAYERS_KEYS}
+    #if full_iso:
+    #    pars_sim_test.update(FULL_ISO_PARS)
+
+    pars_sim_test["iso_factor"] = {k: iso_factor for k in LAYERS_KEYS}
 
     return pars_sim_test
 
@@ -108,6 +108,7 @@ def create_parser():
                 help="Threshold test probability to run rankers with an unlimited number of tests (if <=0, use num_tests)")
     parser.add_argument("--save_rank", type=str, default="", help="Number of the ranking at each time step to save, set to a value >0")
 
+    parser.add_argument("--iso_factor",type=float, default=0.1, help="Isolation factor")
     ##internal contact tracing
     parser.add_argument("--quar_factor", type=float, default=1., help="Effective infectivity reduction in quarantine, 1=> no reduction")
     parser.add_argument("--ct_trace_time", type=int, default=0, help="Time taken to quarantine people with internal contact tracing")
@@ -150,6 +151,8 @@ def check_args(args):
         args.mitigate=False
     if args.noct_c:
         args.ct_exclude+="c"
+    if args.full_iso:
+        args.iso_factor=0.
 
 def check_save_folder(fold, create=True):
     p = Path(fold)
@@ -173,6 +176,7 @@ interv_args_def=lambda args: dict(
     loss_prob=args.p_loss,
     test_delay=args.test_delay,
     give_t_rel=args.give_trel,
+    iso_cts_strength=args.iso_factor
     )
 def make_interv(ranker, rk_name, args, **kwargs):
     pars = interv_args_def(args)
@@ -203,7 +207,9 @@ def make_interv_new(ranker, rk_name, args, **kwargs):
     )
     ## forward/backward special case:
     if args.all_symp_end:
-        args_rknew["symp_test_p"] = lambda sim: 1. if sim.t == (args.T -1) else args.symp_p_t 
+        args_rknew["symp_test_p"] = lambda sim: 1. if sim.t == (args.T -1) else args.symp_p_t
+    #if args.full_iso:
+    #    args_rknew["iso_cts_strength"] = 0.
     pars.update(args_rknew)
     if args.rank_p_test > 0:
         print(f"Using probabilistic ranker with thresh p: {args.rank_p_test}")
@@ -245,10 +251,11 @@ def build_run_sim(rktest_int, rk_name, args, out_fold, run=True, args_analy=None
     dynamic_layers = [k for k in args.dynamic_layer]
     print("Dynamic layers: ",dynamic_layers)
     params = make_std_pars(N,T, seed=seed,
-            full_iso=args.full_iso,
             quar_fact=args.quar_factor,
             n_infect=args.n_sources,
-            dynamic_layers=dynamic_layers)
+            dynamic_layers=dynamic_layers,
+            iso_factor=args.iso_factor
+            )
     print("simulation params:\n\t",json.dumps(params))
     popfile = get_people_file(seed, N)
     period_save = args.n_days_save
@@ -263,7 +270,7 @@ def build_run_sim(rktest_int, rk_name, args, out_fold, run=True, args_analy=None
             save_cts=""
         ct_saver = analysis.ContactsSaver(quar_factor=args.quar_factor,
         iso_factor=params["iso_factor"]["h"],
-        start_day=args.start_day-1, save_only=save_cts,
+        start_day=0, save_only=save_cts,
         every_day=True,
         )
         analyz.insert(1, ct_saver)

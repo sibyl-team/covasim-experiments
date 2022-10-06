@@ -1,7 +1,10 @@
 import numpy as np
 from pandas import Series
+from sklearn.metrics import roc_auc_score
 
-def find_idc_backward(inf_log, idc_obsi, idc_ranking, state):
+#from epidemic import get_state
+
+def find_back_rk(inf_log, idc_obsi, idc_ranking, state):
     ### backward
     df_back=inf_log[np.isin(inf_log["target"],idc_obsi)]
     sources_back = df_back[df_back["source"]>=0]["source"]
@@ -15,9 +18,8 @@ def find_idc_backward(inf_log, idc_obsi, idc_ranking, state):
     backw_R = found_backw[isR]
     return backw_I, backw_R
 
-def find_idc_forward(inf_log, idc_obsi, idc_ranking, state):
+def find_forw_rk(inf_log, idc_obsi, idc_ranking, state):
 
-    
     ff_idc = inf_log[inf_log.source.isin(idc_obsi)].target
     #ff_idc=inf_log[np.isin(inf_log["source"],idc_obsi)]["target"]
     # not in observed
@@ -68,9 +70,9 @@ def find_forw_back_side(test_res, inf_log_f, t_a, ranks_day, state, contacts, nr
 
     inf_log = inf_log_f[inf_log_f["date"]<=t_a]
     ### backward
-    backw_I, backw_R = find_idc_backward(inf_log, idc_obsi, idc_ranking, state)
+    backw_I, backw_R = find_back_rk(inf_log, idc_obsi, idc_ranking, state)
     ### forward
-    forw_I, forw_R = find_idc_forward(inf_log, idc_obsi, idc_ranking, state)
+    forw_I, forw_R = find_forw_rk(inf_log, idc_obsi, idc_ranking, state)
     ## sideward
     # remove found
     idc_tbd = np.setdiff1d(idc_ranking, np.unique(np.concatenate((backw_I, backw_R, forw_I, forw_R))))
@@ -94,3 +96,37 @@ def make_for_back_side(dat, day, n_pos_rank, N):
 
     u = find_forw_back_side(test_res, inf_log_f, day, ranks_day, state, contacts, n_pos_rank)
     return [len(v) for v in u]
+
+def find_idc_back(inf_log_f, idc_obsi, t_rk):
+    inf_log = inf_log_f[inf_log_f["date"]<t_rk]
+    ### backward
+    df_back=inf_log[np.isin(inf_log["target"],idc_obsi)]
+    sources_back = df_back[df_back["source"]>=0]["source"]
+    ## remove idc already observed
+    sources_back = sources_back[~np.isin(sources_back, idc_obsi)]
+
+    return sources_back
+
+def find_idc_forw(inf_log_f, idc_obsi, t_rk):
+
+    inf_log = inf_log_f[inf_log_f["date"]<t_rk]
+
+    ff_idc = inf_log[inf_log.source.isin(idc_obsi)].target
+    ## remove idc already observed
+    ff_idc = ff_idc[~np.isin(ff_idc, idc_obsi)]
+
+    return ff_idc
+
+def auc_roc_ranking(idc_find, idc_exclude, ranks, N):
+    idc_sel=sorted(set(range(N)).difference(idc_exclude))
+    vals_forw = Series(np.zeros(len(idc_sel)),index=idc_sel)
+    vals_forw.loc[idc_find] = 1
+
+    return roc_auc_score(vals_forw.sort_index(),ranks.loc[idc_sel].sort_index())
+
+def prep_ranking(idc_find, idc_exclude, ranks, N):
+    idc_sel=sorted(set(range(N)).difference(idc_exclude))
+    vals_forw = Series(np.zeros(len(idc_sel)),index=idc_sel)
+    vals_forw.loc[idc_find] = 1
+
+    return vals_forw.sort_index(),ranks.loc[idc_sel].sort_index()

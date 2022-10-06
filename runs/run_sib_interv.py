@@ -9,7 +9,6 @@ from scipy.special import expit
 import matplotlib.pyplot as plt
 
 import sib
-import covasim
 import covasim.utils as cvu
 
 import sciris as sc
@@ -46,6 +45,23 @@ def get_prec_exact(T:int):
     return sib.PiecewiseLinear(sib.RealParams(
         list(1-rec_dist.cumsum()) ))
 
+def get_vload_real(T:int):
+    vals_json = """
+    [3.019362537770576e-11, 0.0009782360948130835, 0.07633861827893693, 0.4156928589223723, 0.8594888462305331, 1.1366568819030092, 1.173214488765383, 1.0683914075752121, 0.9441065739274009, 0.8564495046788241, 
+    0.8085247246272426, 0.7859035727331752, 0.7760843741470433, 0.7720107983382031, 0.7703569964105829, 0.7696902603401734, 0.7694208901403633, 0.7693112051903307, 0.7692660316539217, 0.7692471736931447, 
+    0.7692391841951942, 0.7692357467193761, 0.7692342443920941, 0.7692335774481694, 0.7692332767480884, 0.769233139100848, 0.7692330751523832, 0.7692330450125202, 0.7692330306076164, 0.7692330236294361, 
+    0.7692330202045904, 0.7692330185023794, 0.7692330176459926, 0.7692330172100527, 0.7692330169856099, 0.7692330168687848, 0.7692330168073306, 0.769233016774672, 0.7692330167571447, 0.769233016747648,
+     0.7692330167424548, 0.7692330167395898, 0.7692330167379954, 0.7692330167371009,
+     0.7692330167365948, 0.7692330167363062, 0.7692330167361403, 0.7692330167360445, 0.7692330167359887, 0.7692330167359559]
+    """
+    import json
+    vload = json.loads(vals_json)
+    assert T >= len(vload)
+    x = np.zeros(T)
+    x[:len(vload)] = vload
+    x[len(vload):] = x[len(vload)-1]
+    return x
+
 def get_sib_pars(prob_i, prob_r, p_seed, p_sus=0.5, p_autoinf=1e-6):
     pseed = p_seed / (2 - p_seed)
     psus = p_sus * (1 - pseed)
@@ -73,8 +89,10 @@ def get_sib_markov_p(beta,p_seed, p_sus, p_autoinf=1e-10):
 
 def compute_probs_i_r(beta,T, tcut_inf):
 
-    pars_nov0=(1.21533407, 3.87484739)
-    pars_vlow=(1.04475749, 5.97047953)
+    #pars_nov0=(1.21533407, 3.87484739)
+    #pars_vlow=(1.04475749, 5.97047953)
+    pars_nov0 =(1.21533406, 3.87484739)
+    pars_vlow=(1.04399808, 6.97266543)
     values_vload= [1.53846, 0.76923]
 
     u0 = expit(pars_nov0[0]*(range(T+1) - pars_nov0[1]*np.ones(T+1)))
@@ -82,6 +100,7 @@ def compute_probs_i_r(beta,T, tcut_inf):
 
     cutoff = -expit(1.6*(range(T+1) - tcut_inf*np.ones(T+1)))
 
+    #vact = get_vload_real(T+1) + cutoff*values_vload[1]
     vact = u0*values_vload[0]+(values_vload[1]-values_vload[0])*u1 + cutoff*values_vload[1]
 
     gamma_p=(11.40049704552924, 0.8143055827103249)
@@ -108,6 +127,7 @@ if __name__ == "__main__":
     parser.add_argument("--prec_exact", action="store_true")
 
     parser.add_argument("--vload_cut", type=int, default=65, help="Day of cutoff of vload")
+    parser.add_argument("--no-bmed",action="store_false", dest="bmed", help="Use median value for beta")
 
     args = parser.parse_args()
     base.check_args(args)
@@ -128,8 +148,12 @@ if __name__ == "__main__":
         print("Using markov SIR dynamics")
         sibPars = get_sib_markov_p(base.BETA, prob_seed, prob_sus)
     else:
-        warnings.warn("Using median value for Relative transmission")
-        args.prefix+="bmed_"
+        if args.bmed:
+            warnings.warn("Using median value for Relative transmission")
+            args.prefix+="bmed_"
+            mbeta = BETA_MEDIAN
+        else:
+            mbeta = base.BETA
         prob_i, prob_r = compute_probs_i_r(BETA_MEDIAN, T, tcut_inf=args.vload_cut)
         if args.prec_exact:
             prob_r = get_prec_exact(T)
