@@ -106,15 +106,14 @@ def filter_idcs_inf(inf_log, idcs):
     return  list(sups_infected)
 
 def count_superspread(infect_log,ranks_day, tests_stats, ninf_super=11, 
-        n_ranks=100, t_max=None, supersp_idcs=None, debug=False, filter_sups=False):
+        n_rank_pos=100, t_max=None, supersp_idcs=None, debug=False, filter_sups=False):
     
     infect_log = _check_cut_infect_log(infect_log, t_max)
     if supersp_idcs is None:
         
         superspread = _find_supersp_by_inf(infect_log, ninf_super)
     else:
-        #sups_infected = set(infect_log["target"]).intersection(supersp_idcs)
-        #superspread = list(sups_infected)
+
         superspread = filter_idcs_inf(infect_log, supersp_idcs) if filter_sups else supersp_idcs
         if debug: print(superspread)
         #infect_log = _check_cut_infect_log(infect_log, t_max)
@@ -123,6 +122,9 @@ def count_superspread(infect_log,ranks_day, tests_stats, ninf_super=11,
         infect_log=infect_log[infect_log["date"]<=t_max]
     
     inf_obs = tests_stats[tests_stats["res_state"]==1]
+    if t_max is not None:
+        inf_obs = inf_obs[inf_obs["date_res"]<t_max]
+    ### get the observed superspreaders
     supsp_obs=inf_obs[np.isin(inf_obs["i"], superspread)]
     
     v=infect_log[np.isin(infect_log["target"], superspread)]
@@ -130,45 +132,39 @@ def count_superspread(infect_log,ranks_day, tests_stats, ninf_super=11,
     sups_date = Series(index=v["target"],data=v["date"])
 
     
-    day_rank=Series(np.ones(len(superspread),dtype=int)*-200,index=superspread)
+    day_rank=Series(np.ones(len(superspread),dtype=int)*-1000,index=superspread, dtype=np.int)
     day_perfect= sups_date+1
     day_perfect[day_perfect<min(ranks_day.keys())] = min(ranks_day.keys())
     # find min obs time for supersp
-    day_o={}
-    for r in supsp_obs:
-        i,t=(r.i, r.date_res)
-        if i not in day_o:
-            day_o[i] =t 
-        else:
-            day_o[i] = min(t,day_o[i])
-    ### convert to series for easier access
-    if debug: print(supsp_obs,day_o)
-    day_obs = Series(day_o)
 
     for d, rk in ranks_day.items():
         if t_max is not None and d>t_max:
             break
+
+        inf_obs_day = np.unique(inf_obs[inf_obs["date_res"]<d]["i"])
+        sups_found_day = day_rank[(day_rank>=0)&(day_rank<d)].index
+        idcs_rem = list(set(inf_obs_day).union(sups_found_day))
         try:
-            it = rk.sort_values(ascending=False)[:n_ranks].index
+            it = rk.sort_values(ascending=False)
+            it = it.iloc[~np.isin(it.index, idcs_rem)]
+            indc_val = it.index.values[:n_rank_pos]
+            #.index.values
         except AttributeError:
             ### we have a numpy array
             ## sort by val, reverse
             ii = np.argsort(rk["val"])[::-1]
-            # apply order to idx and take first 
-            it = rk["idx"][ii][:n_ranks]
+            ii_choose = ii[~np.isin(ii, idcs_rem)][:n_rank_pos]
+            # apply order to idx 
+            indc_val = rk["idx"][ii_choose]
 
         #supersp to find
         su_find = day_rank[day_rank<0].index
-        #supersp not obs yet
-        i_notf = day_obs[day_obs>=d].index
-        su_find = np.setdiff1d(su_find,i_notf)
         # find the supersp that are in the ranking
-        found_b = np.isin(su_find, it)
-        idc_found=su_find[found_b]
+        idc_found = list(set(su_find).intersection(indc_val))
         ## set the day of the ranking
         day_rank[idc_found] = d
 
-    #print("Found:",(day_rank>=0).sum())
+        if debug: print(f"day : {d}, n found: {(day_rank>=0).sum()}")
     
     return day_rank, day_perfect
 
@@ -176,33 +172,6 @@ def pars_infect_log(x):
         if x["source"] is None:
             x["source"] = -1
         return x
-
-def find_supersp_sim_old(sim,  ninf_super=8,n_ranks=100, **kwargs):
-    inf_log = DataFrame(map(pars_infect_log, 
-            sim.people.infection_log)).to_records(index=False)
-
-    idc_d=sim.people.diagnosed.nonzero()[0]
-
-    date_d=sim.people.date_diagnosed[idc_d]
-
-    #test_data =np.fromiter(zip(idc_d, date_d, np.ones(len(idc_d),dtype=int)), 
-    #           dtype=np.dtype([("i",int),("date_res",int), ("res_state",int)]))
-    test_data = np.rec.fromarrays((idc_d, date_d.astype(int), np.ones(len(idc_d),dtype=int)),
-                      names=["i","date_res","res_state"])
-
-    ranks=sim["interventions"][0].probs_test_saved
-
-    e=count_superspread(inf_log, ranks,
-                                           test_data, ninf_super=ninf_super,n_ranks=n_ranks,
-                                          )
-    
-    infectors, n_infected=np.unique(inf_log.source[inf_log.source>=0], return_counts=True)
-        
-
-    ss=infectors[n_infected>= ninf_super]
-
-
-    return e
 
 def find_supersp_sim_tests(sim,  ninf_super=8,t_max=None, supersp_idcs=None, debug=False, filter_sups=False):
     inf_log = DataFrame(map(pars_infect_log, 
@@ -225,22 +194,30 @@ def find_supersp_sim_tests(sim,  ninf_super=8,t_max=None, supersp_idcs=None, deb
     else:
         #sups_infected = set(inf_log["target"]).intersection(supersp_idcs)
         #superspread = list(sups_infected)
+        pot_f = len(supersp_idcs)
         superspread = filter_idcs_inf(inf_log, supersp_idcs) if filter_sups else supersp_idcs
-        if debug: print(superspread)
+        if debug: print(f"N supersp before: {pot_f}, now: ", len(superspread))
         #inf_log = _check_cut_infect_log(inf_log, t_max)
     
-    day_rank=Series(np.full(len(superspread),-200),index=superspread)
+    day_rank=Series(np.full(len(superspread),-900),index=superspread, dtype=np.int_)
 
-    for d,tt in tested.items():
+    for d in sorted(tested.keys()):
         if t_max is not None and d>t_max:
             break
-        pos_t=test_data[test_data["date_res"]<d]
-        ## choose only the superspreaders
-        ss_find = np.intersect1d(tt,superspread)
-        ## remove those already found infected
-        for i in np.setdiff1d(ss_find, pos_t[pos_t["res_state"]==1]["i"]):
-            #print(i)
-            
-            day_rank[i] = d if day_rank[i] == -200 else max(d,day_rank[i])
+        tt = tested[d]
 
+        iobs_day=test_data[test_data["date_res"]<d]
+        ss_notfound = day_rank[day_rank<0].index
+        ss_tofind = np.intersect1d(superspread, ss_notfound)
+        ## choose only the superspreaders
+        ss_find = np.intersect1d(tt,ss_tofind)
+        ## remove those already found infected
+        for i in np.setdiff1d(ss_find, iobs_day[iobs_day["res_state"]==1]["i"]):
+            #print(i)
+            if debug and day_rank[i]>=0:
+                print(f"ERROR, i {i} already found")
+            assert day_rank[i]<0
+            day_rank[i] = d #if day_rank[i] == -200 else max(d,day_rank[i])
+        
+        #if debug: print("Day rank: ", day_rank)
     return (day_rank,)
