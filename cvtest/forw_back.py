@@ -1,3 +1,4 @@
+from collections import defaultdict
 import numpy as np
 from pandas import Series
 from sklearn.metrics import roc_auc_score
@@ -119,14 +120,77 @@ def find_idc_forw(inf_log_f, idc_obsi, t_rk):
 
 def auc_roc_ranking(idc_find, idc_exclude, ranks, N):
     idc_sel=sorted(set(range(N)).difference(idc_exclude))
+    idc_find = list(set(idc_find).intersection(idc_sel))
     vals_forw = Series(np.zeros(len(idc_sel)),index=idc_sel)
     vals_forw.loc[idc_find] = 1
 
     return roc_auc_score(vals_forw.sort_index(),ranks.loc[idc_sel].sort_index())
 
-def prep_ranking(idc_find, idc_exclude, ranks, N):
-    idc_sel=sorted(set(range(N)).difference(idc_exclude))
+def auc_roc_ranking_idc(idc_find, idc_ranking, ranks):
+    idc_sel=list(idc_ranking) #sorted(set(range(N)).difference(idc_exclude))
+    
+    idc_find = list(set(idc_find).intersection(idc_sel))
+    if len(idc_find) == 0:
+        print(f"No indices to find, before intersect where {len(idc_sel)}")
+    vals_forw = Series(np.zeros(len(idc_sel)),index=idc_sel)
+    vals_forw.loc[idc_find] = 1
+
+    return roc_auc_score(vals_forw.sort_index(),ranks.loc[idc_sel].sort_index())
+
+def prep_ranking(idc_find, idcs, ranks, N, exclude_idcs=False):
+    if exclude_idcs:
+        idc_sel=sorted(set(range(N)).difference(idcs))
+    else:
+        idc_sel = list(idcs)
+    idc_find = list(set(idc_find).intersection(idc_sel))
     vals_forw = Series(np.zeros(len(idc_sel)),index=idc_sel)
     vals_forw.loc[idc_find] = 1
 
     return vals_forw.sort_index(),ranks.loc[idc_sel].sort_index()
+
+def find_possible_side(inf_log, iobs):
+    log_noobs=inf_log[~inf_log.target.isin(iobs)]
+    whoinf=dict(zip(log_noobs["target"],log_noobs["source"]))
+    inf_path={}
+    c=0
+    for l in range(len(log_noobs)):
+        src = log_noobs["source"].iloc[l]
+        trg = log_noobs["target"].iloc[l]
+        #if trg in inf_path:
+        if src <0:
+            continue
+        inf_path[trg] = [src]
+        c+=1
+        if src in whoinf:
+            src = whoinf[src]
+            #if src in iobs:
+            #    #print("Stop")
+            inf_path[trg].insert(0,src)
+            c+=1
+            while src >=0:
+                if src in whoinf:
+                    src = whoinf[src]
+                    inf_path[trg].insert(0,src)
+                else:
+                    src = -2
+
+                c+=1
+        #print(f"{l:4d}/{len(log_noobs):4d}",end="\r")
+    #print("\n",c)
+    
+    deleted=0
+    fow_p_side=defaultdict(set)
+    for k in sorted(inf_path.keys()):
+        #print(k, len(inf_path[k]), sum(np.isin(inf_path[k], iobs)))
+        if len(inf_path[k])>1 and inf_path[k][0] in iobs:
+            #print(k, inf_path[k])
+            assert np.any(np.isin(inf_path[k][1:], iobs))==False
+            lu = inf_path[k]
+            for i in range(2,len(lu)):
+                fow_p_side[lu[0]].add((lu[i],i))
+            fow_p_side[lu[0]].add((k,len(lu)))
+        else:
+            del inf_path[k]
+            deleted+=1
+    
+    return fow_p_side, deleted, inf_path
