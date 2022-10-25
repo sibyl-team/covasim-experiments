@@ -1,6 +1,6 @@
 from collections import defaultdict
 import numpy as np
-from pandas import Series
+from pandas import Series, DataFrame
 from sklearn.metrics import roc_auc_score
 
 #from epidemic import get_state
@@ -118,6 +118,57 @@ def find_idc_forw(inf_log_f, idc_obsi, t_rk):
 
     return ff_idc
 
+def select_idcs_forw_back(dat, t_lim, N, state):
+    inf_log = DataFrame(dat["infect_log"])
+    tests_st = DataFrame(dat["test_stats"])
+    
+    ranks = dat["rk_extra_stats"].item()
+    rank_ser = DataFrame(ranks[t_lim]).set_index("idx")["val"]
+    #state = get_state(N, dat["people_dates"],t_lim)
+    ## find tested infected
+    df_obs_i=tests_st[(tests_st.res_state==1) & (tests_st.date_res<t_lim)]
+
+    counts=df_obs_i["i"].value_counts()
+    infected = (state > 0) & (state < 7)
+    inf_idcs = np.where(infected)[0]
+
+    idcs_obs = np.unique( df_obs_i["i"])
+    idc_back=np.unique(find_idc_back(inf_log,idcs_obs, t_lim))
+    idc_forw=np.unique(find_idc_forw(inf_log,idcs_obs, t_lim))
+    
+    
+    frac_back_i = (infected[idc_back]).mean()
+    idc_back_i = idc_back[infected[idc_back]]
+    
+    frac_forw_i = (infected[idc_forw]).mean()
+    idc_forw_i = idc_forw[infected[idc_forw]]
+    
+    ### sideward
+    inf_log_cut= inf_log[inf_log["date"]<t_lim]
+    #poss_side,_,_ = forback.find_possible_side(inf_log_cut, idcs_obs)
+    #contacts = dat["contacts"]
+    #idcs_side, _, _ = filter_infect_contacts(tests_st, contacts, poss_side,t_lim)
+    ## other forwards
+    other_inf_forw = find_possible_side(inf_log_cut, idcs_obs)[0]
+    #inf_distance = forw_idcs_distance(other_inf_forw)
+    #forw_sec = np.array(list(set(inf_distance[2])))
+    forw_sec = np.array(
+        forw_idcs_min_d(other_inf_forw, d_min=2, d_max=3)
+    )
+    frac_forw_sec_i = (infected[forw_sec]).mean()
+    idc_forw_sec_i = forw_sec[infected[forw_sec]]
+    
+    #idcs_side = np.unique(list(idcs_side))
+    ## filter side by status
+    #idcs_side_inf = idcs_side[infected[idcs_side]] if len(idcs_side) > 0 else []
+    
+    idcs_inf_else = set(np.where(infected)[0]).difference(idcs_obs).difference(idc_forw_i).\
+        difference(idc_back_i).difference(idc_forw_sec_i) #.difference(idcs_side_inf)
+    indices_find = {"back": idc_back_i, "forw": idc_forw_i,
+         "forw_2": forw_sec, "else": idcs_inf_else}
+    return idcs_obs,indices_find,rank_ser, \
+        (frac_back_i, frac_forw_i, frac_forw_sec_i, (counts).mean(), (counts>1).mean())
+
 def auc_roc_ranking(idc_find, idc_exclude, ranks, N):
     idc_sel=sorted(set(range(N)).difference(idc_exclude))
     idc_find = list(set(idc_find).intersection(idc_sel))
@@ -194,3 +245,19 @@ def find_possible_side(inf_log, iobs):
             deleted+=1
     
     return fow_p_side, deleted, inf_path
+
+def forw_idcs_distance(fow_poss_side):
+    oth_inf_f= defaultdict(list)
+    for k, d in fow_poss_side.items():
+        for l in d:
+            oth_inf_f[l[1]].append(l[0])
+    return oth_inf_f
+
+def forw_idcs_min_d(fow_poss_side, d_min=2, d_max=1000):
+    oth_inf_f= list() #defaultdict(list)
+    for k, d in fow_poss_side.items():
+        for l in d:
+            if l[1] >= d_min and l[1] <= d_max:
+                oth_inf_f.append(l[0])
+            #oth_inf_f[l[1]].append(l[0])
+    return oth_inf_f
