@@ -128,6 +128,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--vload_cut", type=int, default=65, help="Day of cutoff of vload")
     parser.add_argument("--no-bmed",action="store_false", dest="bmed", help="Use median value for beta")
+    parser.add_argument("--fast_ct", action="store_true", dest="sib_fast_ctadd")
 
     args = parser.parse_args()
     base.check_args(args)
@@ -175,7 +176,8 @@ if __name__ == "__main__":
         tau=0,
         fnr=fn_rate,
         fpr=fp_rate,
-        #debug_times=True,
+        debug_times=True,
+        faster_ctadd=args.sib_fast_ctadd,
 
     )
     interv = base.make_interv_new(ranker, rk_name, args)
