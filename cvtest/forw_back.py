@@ -1,4 +1,5 @@
 from collections import defaultdict
+import warnings
 import numpy as np
 from pandas import Series, DataFrame
 from sklearn.metrics import roc_auc_score
@@ -122,8 +123,12 @@ def select_idcs_forw_back(dat, t_lim, N, state):
     inf_log = DataFrame(dat["infect_log"])
     tests_st = DataFrame(dat["test_stats"])
     
-    ranks = dat["rk_extra_stats"].item()
-    rank_ser = DataFrame(ranks[t_lim]).set_index("idx")["val"]
+    if "rk_extra_stats" in dat:
+        ranks = dat["rk_extra_stats"].item()
+        rank_ser = DataFrame(ranks[t_lim]).set_index("idx")["val"]
+    else:
+        rank_ser = None
+        warnings.warn("No ranking found!")
     #state = get_state(N, dat["people_dates"],t_lim)
     ## find tested infected
     df_obs_i=tests_st[(tests_st.res_state==1) & (tests_st.date_res<t_lim)]

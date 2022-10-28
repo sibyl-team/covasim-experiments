@@ -3,60 +3,81 @@ from warnings import warn
 import warnings
 import numpy as np
 from pandas import Series, DataFrame
+import forw_back as forback
+import epidemic as epian
 
-def get_rank_forw_back(ranks_t, test_stats, inf_log, n_ranking=100):
-    """
-    Find the number of infections a ranker is able to 
-    find, either backward or forward in the transmission tree,
-    from the observations of infected inviduals
+from sklearn.metrics import roc_auc_score, average_precision_score, roc_curve
 
-    ranks_t: dict of all ranks for time
-    test_stats: all the test statistics from a run
-    inf_log: DataFrame of the log of the infections from covasim, 
-             !!assuming that seed infections have negative source!!
-
-    DEPRECATED
-    """
-    warnings.warn("This method is deprecated", DeprecationWarning)
-    counts_back = {}
-    counts_for = {}
-    discovered = set()
-    pos_tests = test_stats[test_stats["res_state"]==1]
-    ## another version
-    for d, rk in ranks_t.items():
-        if np.abs(rk.sum()-rk.mean()) <1e-12:
-            continue
-        #print(rk.sum(), rk.mean())#-rk.mean()))
-        obs_ = pos_tests[pos_tests["date_res"] == (d-1)]["i"]
-
-        rk_cut= rk.sort_values(ascending=False)[:n_ranking]
-        infectors = inf_log[inf_log.target.isin(obs_) & (inf_log.date < d) ]
-        infectors = infectors[infectors.source >= 0]
-        #print(infectors)
-        #infect_rel[(infect_rel.date_obs==(d-1)) & (infect_rel.date < d)]
-        src_tofind = (infectors.source.values)
-        inf_found = rk_cut.index[
-            rk_cut.index.isin(src_tofind) ]#.sum()
-        new_f = set(inf_found).difference(discovered)
-        c = len(new_f)
-        #print(d,set(inf_found),"new: ", new_f)
-        counts_back[d] = c
-        discovered.update(inf_found)
+def compute_aucs_forback(mres, t_rk,seeds,N, random_ranks=False,other_ranks=None):
+    c=[]
+    aucs=[]
+    aver_prec = []
+    counts_infect = []
+    rocs={"forw":[], "back":[]}
+    for i in seeds:
+        state = epian.get_state(N, mres[i]["people_dates"],t_rk)
+        iobs, idc_find, rank, l=forback.select_idcs_forw_back(mres[i], t_rk, N, state)
+        if rank is None:
+            #raise ValueError("None rank")
+            rank = other_ranks[i][t_rk]
         
-        ## infected (forward)
-        assert np.all(infectors.target.isin(obs_))
-        toinf = inf_log[inf_log.source.isin(obs_) & (inf_log.date <= d)]
-        inf_tofind = (toinf.target.values)
-        inf_found = rk_cut.index[
-            rk_cut.index.isin(inf_tofind) ]
-        ## save new
-        new_f = set(inf_found).difference(discovered)
-        #print(set(inf_found),"new: ", new_f)
-        counts_for[d] = len(new_f)
-        discovered.update(inf_found)
+        iback = idc_find["back"]
+        ifor = idc_find["forw"]
+        iforw_sec = idc_find["forw_2"]
+        inf_rest = idc_find["else"]
+        #print(i,l[-1])
+        c.append(list(l))
+        ib_only=set(iback).difference(ifor).difference(iforw_sec)
+        if_only = set(ifor).difference(iback).difference(iforw_sec)
+        if2_only = set(iforw_sec).difference(ifor).difference(iback)
+        assert len(set(iobs).intersection(ifor))==0
+        assert len(set(iobs).intersection(iforw_sec))==0
+        assert len(set(iobs).intersection(inf_rest)) == 0
+        counts_infect.append([len(iobs), len(set(iback)), len(set(ifor)), len(iforw_sec),
+                              len(inf_rest), len(ib_only), len(if_only), len(if2_only)])
+        if random_ranks:
+            rank= Series(np.random.rand(len(rank)))
+        rank = rank/rank.max()
+        ##assert len(set(iback).intersection(iside)) == 0
+        ##assert len(set(ifor).intersection(iside)) == 0
+        #print(i, cs, len(set(iback).intersection(ifor)))
+        #ib_find=list(set(iback).difference(ifor)) #np.setdiff1d(iback,ifor)
+        #if_find=list(set(ifor).difference(iback))
+        #iside_find = list(set(iside).difference(iback))
+        
+        all_notinf = np.where((state <1) | (state >=7))[0] #set(range(N)).difference(all_inf)
+        if len(iback)>0:
+            idc_choose=set(iback).union(all_notinf)
+            r = forback.prep_ranking(iback,idc_choose ,rank, N, exclude_idcs=False)
+            auc_back= roc_auc_score(*r)
+            ap_back = average_precision_score(*r)
+            rocs["back"].append(roc_curve(*r))
+        else:
+            print(f"Seed {i} has no backward")
+            auc_back = np.nan
+            ap_back = np.nan
 
-    return dict(forward=counts_for, backward=counts_back)
-    #counts_for, counts_back
+        sn_forw =  set(ifor).union(all_notinf)
+        rf = forback.prep_ranking(ifor,sn_forw ,rank, N, exclude_idcs=False)
+        forw2_dat = forback.prep_ranking(iforw_sec, set(iforw_sec).union(all_notinf), rank, N, exclude_idcs=False)
+        aucs.append((auc_back,
+                    roc_auc_score(*rf),
+                     ##dat_side[0],
+                     roc_auc_score(*forw2_dat)
+                   ))
+        aver_prec.append((ap_back,
+                          average_precision_score(*rf), 
+                          #dat_side[1],
+                          #average_precision_score(*forw2_dat),
+                         ))
+        rocs["forw"].append(roc_curve(*rf))
+        print(f"{i:4d}/{len(seeds):4d}", end="\r")
+    print("")
+    #print(c[0])
+    c=np.stack(c)
+    aucs=np.stack(aucs)
+    aver_prec = np.stack(aver_prec)
+    return c, aucs, aver_prec, np.stack(counts_infect), rocs
 
 def find_infection_counts(tt):
     newhist = defaultdict(list)
