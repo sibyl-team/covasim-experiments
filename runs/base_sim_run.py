@@ -107,6 +107,7 @@ def create_parser():
     parser.add_argument("--rk_p_test",type=float, default=-2., dest="rank_p_test",
                 help="Threshold test probability to run rankers with an unlimited number of tests (if <=0, use num_tests)")
     parser.add_argument("--save_rank", type=str, default="", help="Number of the ranking at each time step to save, set to a value >0")
+    #parser.add_argument("--save_rank_start",type=int, default=-1, help="day to start saving ranking")
 
     parser.add_argument("--iso_factor",type=float, default=0.1, help="Isolation factor")
     ##internal contact tracing
@@ -137,6 +138,7 @@ def create_parser():
     parser.add_argument("--save_contacts", type=str, default="", help='''Decide available contacts to save. 
 Put "all" to save all available, "EI" for the ones from/to infected and exposed individuals 
 ''')
+    parser.add_argument("--cts_save_start", type=int, default=-1, help="Start date of saving contacts")
 
     #Development pars
     parser.add_argument("--give_trel", action="store_true")
@@ -265,12 +267,13 @@ def build_run_sim(rktest_int, rk_name, args, out_fold, run=True, args_analy=None
     lambda sim: save_data(sim, period_save,  args, rk_name, out_fold, args.start_day)]
     save_cts = args.save_contacts
     if args.save_contacts is not None and args.save_contacts!="":
+        day_save = args.cts_save_start if args.cts_save_start >=0 else 0
         print("SAVING CONTACTS, THIS MAY USE A HUGE AMOUNT OF MEMORY!!")
         if args.save_contacts == "all":
             save_cts=""
         ct_saver = analysis.ContactsSaver(quar_factor=args.quar_factor,
         iso_factor=params["iso_factor"]["h"],
-        start_day=0, save_only=save_cts,
+        start_day=day_save, save_only=save_cts,
         every_day=True,
         )
         analyz.insert(1, ct_saver)
@@ -283,6 +286,8 @@ def build_run_sim(rktest_int, rk_name, args, out_fold, run=True, args_analy=None
         ct_probs = {"h":0.7, "w": 0.2, "s": 0.2, "c": 0., "l": 0.7}
     print(f"Contact tracing probs: {ct_probs}")
     ct = covasim.contact_tracing(trace_probs=ct_probs, trace_time=args.ct_trace_time, start_day=args.start_day)
+    #from covasibyl.tracing import FlexibleTracing
+    #ct = FlexibleTracing(trace_probs=ct_probs, trace_time=args.ct_trace_time, start_day=args.start_day)
 
     sim = covasim.Sim(pars=params,
         popfile=popfile,
@@ -328,6 +333,7 @@ def save_sim_results(sim, args, rk_name, out_fold):
     del pars_sim["interventions"]
     del pars_sim["analyzers"]
 
+    ### Infection log
     def pars_log(x):
         if x["source"] is None:
             x["source"] = -1
@@ -418,7 +424,8 @@ def save_sim_results(sim, args, rk_name, out_fold):
         ct_saver=sim["analyzers"][1]
         assert isinstance(ct_saver, analysis.ContactsSaver)
         cts=ct_saver.contacts_saved
-        np.savez_compressed(out_fold / f"{savefile_name}_contacts.npz", **{f"cts_{d}": data for d,data in cts.items()})
+        if cts is not None:
+            np.savez_compressed(out_fold / f"{savefile_name}_contacts.npz", **{f"cts_{d}": data for d,data in cts.items()})
 
 def make_filename(args, N:int,T:int,seed:int, rk_name:str):
     fnr_str = ""
