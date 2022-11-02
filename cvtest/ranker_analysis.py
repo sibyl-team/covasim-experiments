@@ -123,12 +123,19 @@ def _check_cut_infect_log(inf_log, t_max:int=None):
     return inf_log
 
 def filter_idcs_inf(inf_log, idcs):
+    """
+    Filter indices selecting only those resulting as infected in the log
+    """
     sups_infected = set(inf_log["target"]).intersection(idcs)
     return  list(sups_infected)
 
 def count_superspread(infect_log,ranks_day, tests_stats, ninf_super=11, 
-        n_rank_pos=100, t_max=None, supersp_idcs=None, debug=False, filter_sups=False):
-    
+        n_rank_pos=100, t_max=None, supersp_idcs=None, ss_notobs=False, debug=False, filter_sups=False):
+    """
+    Count the number of superspreaders found
+    """
+
+    ## cut infection log to before the time of 
     infect_log = _check_cut_infect_log(infect_log, t_max)
     if supersp_idcs is None:
         
@@ -146,13 +153,15 @@ def count_superspread(infect_log,ranks_day, tests_stats, ninf_super=11,
     if t_max is not None:
         inf_obs = inf_obs[inf_obs["date_res"]<t_max]
     ### get the observed superspreaders
-    supsp_obs=inf_obs[np.isin(inf_obs["i"], superspread)]
+    #supsp_obs=inf_obs[np.isin(inf_obs["i"], superspread)]
+    if ss_notobs:
+        idcs_iobs = np.unique(inf_obs["i"])
+        superspread = np.setdiff1d(superspread, idcs_iobs)
     
     v=infect_log[np.isin(infect_log["target"], superspread)]
     ## they are infected
     sups_date = Series(index=v["target"],data=v["date"])
 
-    
     day_rank=Series(np.ones(len(superspread),dtype=int)*-1000,index=superspread, dtype=np.int)
     day_perfect= sups_date+1
     day_perfect[day_perfect<min(ranks_day.keys())] = min(ranks_day.keys())
