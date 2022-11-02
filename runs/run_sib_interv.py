@@ -145,17 +145,18 @@ if __name__ == "__main__":
     prob_sus = 0.5
     fp_rate = args.fpr if args.fpr > 0 else 1e-6
     fn_rate = args.fnr if args.fnr > 0 else 1e-6
+    if args.bmed:
+        warnings.warn("Using median value for Relative transmission")
+        args.prefix+="bmed_"
+        mbeta = BETA_MEDIAN
+    else:
+        mbeta = base.BETA
+
     if args.markov:
         print("Using markov SIR dynamics")
-        sibPars = get_sib_markov_p(base.BETA, prob_seed, prob_sus)
+        sibPars = get_sib_markov_p(mbeta, prob_seed, prob_sus)
     else:
-        if args.bmed:
-            warnings.warn("Using median value for Relative transmission")
-            args.prefix+="bmed_"
-            mbeta = BETA_MEDIAN
-        else:
-            mbeta = base.BETA
-        prob_i, prob_r = compute_probs_i_r(BETA_MEDIAN, T, tcut_inf=args.vload_cut)
+        prob_i, prob_r = compute_probs_i_r(mbeta, T, tcut_inf=args.vload_cut)
         if args.prec_exact:
             prob_r = get_prec_exact(T)
         
