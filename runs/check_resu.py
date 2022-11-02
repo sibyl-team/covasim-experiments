@@ -31,6 +31,7 @@ parser = argparse.ArgumentParser(description="Check run")
 parser.add_argument("folder", type=str, help="Saving folder")
 parser.add_argument("rank", type=str, help="Ranker name")
 parser.add_argument("-T", type=int, default=100)
+parser.add_argument("-N",type=float,default=50e3)
 parser.add_argument("-pf","--prefix", type=str, default="", help="Out file prefix")
 
 
@@ -55,18 +56,25 @@ p = Path(args.folder)
 if not p.resolve().exists():
     raise ValueError(f"Folder {p} doesn't exist.")
 
+c=0
+e=0
 rseeds = range(args.seeds[0], args.seeds[1]+1)
 for seed in rseeds:
-    fname = make_filename(args, int(50e3),args.T,seed, args.rank)
+    nn=int(args.N)
+    fname = make_filename(args, nn,args.T,seed, args.rank)
     try:
         with np.load(p/f"{fname}_stats.npz") as d:
             last = d["sim_counts"][-1]["t"]
+            c+=1
             if last < args.T:
                 print(f"seed: {seed}, last time save: {last}")
                 print(f"\t{p/fname} is not finished")
+                e+=1
     except FileNotFoundError:
         print(f"{p/fname} does not exist")
+        e+=1
         #print(f"seed: {seed}, last time save: {last}")
 lu = list(rseeds)
+print(f"\nChecked {c} files,  {e} are not finished")
 print(f"DONE,\nChecked seeds range: {lu[0]} - {lu[-1]}")
 
