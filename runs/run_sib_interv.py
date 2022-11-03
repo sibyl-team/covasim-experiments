@@ -132,6 +132,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     base.check_args(args)
+    if args.give_t_rel:
+        print("Giving T rel, not using beta med")
+        args.bmed = False
     
     print("Arguments:")
     print("\t",args)
