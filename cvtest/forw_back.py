@@ -194,6 +194,11 @@ def auc_roc_ranking_idc(idc_find, idc_ranking, ranks):
     return roc_auc_score(vals_forw.sort_index(),ranks.loc[idc_sel].sort_index())
 
 def prep_ranking(idc_find, idcs, ranks, N, exclude_idcs=False):
+    """
+    Prepare ranking for sklearn methods
+
+    input: indices to put as 1s, all idcs to include in the metric, rank in pandas series, N
+    """
     if exclude_idcs:
         idc_sel=sorted(set(range(N)).difference(idcs))
     else:
