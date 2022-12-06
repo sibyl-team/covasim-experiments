@@ -202,6 +202,8 @@ if __name__ == "__main__":
         interv.iso_cts_strength = 0.
     
     sib.set_num_threads(args.n_cores)
+    argsv=vars(args)
+    argsv["sib_version"]=sib.version()
 
     sim = base.build_run_sim(interv, rk_name, args, OUT_FOLD, args_analy={"printout":True})
 
