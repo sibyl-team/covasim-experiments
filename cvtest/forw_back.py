@@ -120,6 +120,9 @@ def find_idc_forw(inf_log_f, idc_obsi, t_rk):
     return ff_idc
 
 def select_idcs_forw_back(dat, t_lim, N, state):
+    """
+    Give indices and stats
+    """
     inf_log = DataFrame(dat["infect_log"])
     tests_st = DataFrame(dat["test_stats"])
     
@@ -128,7 +131,6 @@ def select_idcs_forw_back(dat, t_lim, N, state):
         rank_ser = DataFrame(ranks[t_lim]).set_index("idx")["val"]
     else:
         rank_ser = None
-        warnings.warn("No ranking found!")
     #state = get_state(N, dat["people_dates"],t_lim)
     ## find tested infected
     df_obs_i=tests_st[(tests_st.res_state==1) & (tests_st.date_res<t_lim)]
@@ -203,7 +205,7 @@ def prep_ranking(idc_find, idcs, ranks, N, exclude_idcs=False):
         idc_sel=sorted(set(range(N)).difference(idcs))
     else:
         idc_sel = list(idcs)
-    idc_find = list(set(idc_find).intersection(idc_sel))
+    #idc_find = list(set(idc_find).intersection(idc_sel))
     vals_forw = Series(np.zeros(len(idc_sel)),index=idc_sel)
     vals_forw.loc[idc_find] = 1
 

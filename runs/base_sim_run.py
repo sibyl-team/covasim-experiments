@@ -123,6 +123,7 @@ def create_parser():
     # Arguments for superspreader analysis
     parser.add_argument("--mitigate",action="store_true", help="Use intervention, give --no-mitigate if you don't want an intervention")
     parser.add_argument('--no-mitigate', dest='mitigate', action='store_false')
+    parser.add_argument("--miti_force", dest="force_mitigate", action="store_true")
     parser.set_defaults(mitigate=True)
     
     parser.add_argument("--symp_p_t", type=float, default=0.5, help="Probability of testing a symptomatic individual, default=0.5")
@@ -155,6 +156,9 @@ def check_args(args):
         args.ct_exclude+="c"
     if args.full_iso:
         args.iso_factor=0.
+    
+    if args.force_mitigate:
+        args.mitigate=True
 
 def check_save_folder(fold, create=True):
     p = Path(fold)

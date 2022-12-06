@@ -9,16 +9,23 @@ import epidemic as epian
 from sklearn.metrics import roc_auc_score, average_precision_score, roc_curve
 
 def compute_aucs_forback(mres, t_rk,seeds,N, random_ranks=False,other_ranks=None):
+    """
+    Compute AUCs for the forward backward.
+
+    Returns counts, aucs (backward, forward, forward2+), average prec and count infected, and the ROCs
+    """
     c=[]
     aucs=[]
     aver_prec = []
     counts_infect = []
-    rocs={"forw":[], "back":[]}
-    for i in seeds:
+    rocs={"forw":[], "back":[], "idc_back":[]}
+    for i in sorted(seeds):
         state = epian.get_state(N, mres[i]["people_dates"],t_rk)
         iobs, idc_find, rank, l=forback.select_idcs_forw_back(mres[i], t_rk, N, state)
         if rank is None:
-            #raise ValueError("None rank")
+            print(f"No ranking found for seed {i}",end=" ")
+            if other_ranks is None:
+                raise ValueError("You have to give a ranking if it's missing from the res dict")
             rank = other_ranks[i][t_rk]
         
         iback = idc_find["back"]
@@ -38,6 +45,7 @@ def compute_aucs_forback(mres, t_rk,seeds,N, random_ranks=False,other_ranks=None
         if random_ranks:
             rank= Series(np.random.rand(len(rank)))
         rank = rank/rank.max()
+        assert isinstance(rank, Series)
         ##assert len(set(iback).intersection(iside)) == 0
         ##assert len(set(ifor).intersection(iside)) == 0
         #print(i, cs, len(set(iback).intersection(ifor)))
@@ -46,6 +54,7 @@ def compute_aucs_forback(mres, t_rk,seeds,N, random_ranks=False,other_ranks=None
         #iside_find = list(set(iside).difference(iback))
         
         all_notinf = np.where((state <1) | (state >=7))[0] #set(range(N)).difference(all_inf)
+        rocs["idc_back"].append(iback)
         if len(iback)>0:
             idc_choose=set(iback).union(all_notinf)
             r = forback.prep_ranking(iback,idc_choose ,rank, N, exclude_idcs=False)
