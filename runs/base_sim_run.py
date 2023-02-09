@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import sciris as sc
 import covasim 
-from covasibyl import ranktest, ranktestnew
+from covasibyl import ranktestnew
 from covasibyl import analyzers as analysis
 from covasibyl.utils import get_git_revision_hash as covasibyl_git_hash
 
@@ -184,19 +184,7 @@ interv_args_def=lambda args: dict(
     give_t_rel=args.give_trel,
     iso_cts_strength=args.iso_factor
     )
-def make_interv(ranker, rk_name, args, **kwargs):
-    pars = interv_args_def(args)
-    pars.update(kwargs)
-    if np.abs(args.symp_p_t - 0.5) >1e-10:
-        raise NotImplementedError("Cannot run old ranker with equivalent prob of sympt != 0.5")
-    rktest_int = ranktest.RankTester(ranker, f"{rk_name} ranker",
-                                num_tests_algo=args.nt_algo,
-                                num_tests_rand=args.nt_rand,
-                                symp_test=80.,
-                                logger=dummy_logger(),
-                                **pars
-                                )
-    return rktest_int
+
 
 def make_interv_new(ranker, rk_name, args, **kwargs):
     pars = interv_args_def(args)

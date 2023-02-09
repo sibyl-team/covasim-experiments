@@ -130,6 +130,7 @@ if __name__ == "__main__":
     parser.add_argument("--vload_cut", type=int, default=65, help="Day of cutoff of vload")
     parser.add_argument("--no-bmed",action="store_false", dest="bmed", help="Use median value for beta")
     parser.add_argument("--fast_ct", action="store_true", dest="sib_fast_ctadd")
+    parser.add_argument("--sib_tau", default=-1,type=int, help="Sib tau value")
 
     args = parser.parse_args()
     base.check_args(args)
@@ -171,6 +172,7 @@ if __name__ == "__main__":
     rk_name = "sib"
     if args.markov:
         rk_name+="_mk"
+    tau_sib = args.sib_tau if args.sib_tau > 0 else None
     ranker = sib_rank.SibRanker(
         params=sibPars,
         maxit0=20,
@@ -178,7 +180,7 @@ if __name__ == "__main__":
         tol=args.sib_tol,
         memory_decay=1e-5,
         window_length=args.win_length,
-        tau=None,
+        tau=tau_sib,
         fnr=fn_rate,
         fpr=fp_rate,
         debug_times=True,
