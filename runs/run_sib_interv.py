@@ -172,7 +172,12 @@ if __name__ == "__main__":
     rk_name = "sib"
     if args.markov:
         rk_name+="_mk"
-    tau_sib = args.sib_tau if args.sib_tau > 0 else None
+    #tau_sib = args.sib_tau if args.sib_tau > 0 else None
+    tau_sib=None
+    if args.sib_tau > 0:
+        tau_sib = args.sib_tau
+        rk_name+=f"_t{tau_sib}"
+
     ranker = sib_rank.SibRanker(
         params=sibPars,
         maxit0=20,
