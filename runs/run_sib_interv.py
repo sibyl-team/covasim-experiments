@@ -15,7 +15,6 @@ import sciris as sc
 
 from covasibyl.rankers import sib_rank
 from covasibyl import utils
-from covasibyl import ranktest as rktest
 
 import base_sim_run as base
 
