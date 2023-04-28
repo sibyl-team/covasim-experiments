@@ -294,6 +294,17 @@ def build_run_sim(rktest_int, rk_name, args, out_fold, run=True, args_analy=None
 
     return sim
 
+def save_args(args, rk_name, out_fold):
+    seed = args.seed
+    N = args.N #sim.pars["pop_size"]
+    T= args.T
+    savefile_name = make_filename(args, N, T, seed, rk_name)
+    args_d = vars(args)
+    if len(args.fold_save)>0:
+        out_fold = args.fold_save
+    out_fold = Path(out_fold)
+    sc.savejson(out_fold / f"{savefile_name}_args.json", args_d)
+
 def save_sim_results(sim, args, rk_name, out_fold):
     seed = args.seed
     N = sim.pars["pop_size"]
@@ -405,7 +416,7 @@ def save_sim_results(sim, args, rk_name, out_fold):
     out_fold = check_save_folder(out_fold)
     savefile_name = make_filename(args, N, T, seed, rk_name)
     print("Saving results to: ", out_fold, savefile_name)
-    sc.saveobj(out_fold / f"{savefile_name}_res.pkl", save_dict)
+    sc.saveobj(out_fold / f"{savefile_name}_res.pkl", save_dict, compression="zstd", compresslevel=7)
     np.savez_compressed(out_fold / f"{savefile_name}_stats.npz", **arrs_save)
 
     args_d = vars(args)
