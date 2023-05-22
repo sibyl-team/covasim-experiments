@@ -421,6 +421,8 @@ def save_sim_results(sim, args, rk_name, out_fold):
 
     args_d = vars(args)
 
+    args_d["extra"] = {"t_save": sim.t}
+
     sc.savejson(out_fold / f"{savefile_name}_args.json", args_d)
 
     if args.save_contacts is not None and args.save_contacts!="":

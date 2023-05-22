@@ -140,8 +140,12 @@ def select_idcs_forw_back(dat, t_lim, N, state):
     inf_idcs = np.where(infected)[0]
 
     idcs_obs = np.unique( df_obs_i["i"])
+    # backward nodes, who have infected the observed, but have not been observ.
     idc_back=np.unique(find_idc_back(inf_log,idcs_obs, t_lim))
+    # forward nodes, have been infected by the observed (directly), not observ
     idc_forw=np.unique(find_idc_forw(inf_log,idcs_obs, t_lim))
+    #backward of backward
+    idcs_back_back = np.unique(find_idc_back(inf_log, idc_back, t_lim))
     
     
     frac_back_i = (infected[idc_back]).mean()
@@ -149,6 +153,9 @@ def select_idcs_forw_back(dat, t_lim, N, state):
     
     frac_forw_i = (infected[idc_forw]).mean()
     idc_forw_i = idc_forw[infected[idc_forw]]
+
+    frac_b2_i = (infected[idcs_back_back]).mean()
+    idc_b2_i = idcs_back_back[infected[idcs_back_back]]
     
     ### sideward
     inf_log_cut= inf_log[inf_log["date"]<t_lim]
@@ -170,9 +177,10 @@ def select_idcs_forw_back(dat, t_lim, N, state):
     #idcs_side_inf = idcs_side[infected[idcs_side]] if len(idcs_side) > 0 else []
     
     idcs_inf_else = set(np.where(infected)[0]).difference(idcs_obs).difference(idc_forw_i).\
-        difference(idc_back_i).difference(idc_forw_sec_i) #.difference(idcs_side_inf)
+        difference(idc_back_i).difference(idc_forw_sec_i).difference(idc_b2_i)
+    #.difference(idcs_side_inf)
     indices_find = {"back": idc_back_i, "forw": idc_forw_i,
-         "forw_2": forw_sec, "else": idcs_inf_else}
+         "forw_2": forw_sec, "back_2": idc_b2_i, "frac_b2_i": frac_b2_i, "else": idcs_inf_else}
     return idcs_obs,indices_find,rank_ser, \
         (frac_back_i, frac_forw_i, frac_forw_sec_i, (counts).mean(), (counts>1).mean())
 
