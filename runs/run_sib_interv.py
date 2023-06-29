@@ -120,7 +120,7 @@ if __name__ == "__main__":
     parser.add_argument("--n_cores", default=5, type=int, help="Set the number of cores for sib")
     parser.add_argument("--sib_tol", default=1e-3, type=float, help="Tolerance for sib convergence")
     parser.add_argument("--markov", action="store_true", help="Use Markov SIR params")
-    parser.add_argument("--n_src", default=1, type=int, help="Number of seeds in the epidemic cascade")
+    parser.add_argument("--n_src_sib", default=1, type=int, help="Number of seeds in the epidemic cascade")
     parser.add_argument("--p_autoinf", default=1e-6, type=float, help="Prob of autoinfection for sib")
     parser.add_argument("--win_length", default=21, type=int, help="Length of BP window")
     parser.add_argument("--debug_c", action="store_true", help="Debug convergence time")
@@ -143,9 +143,12 @@ if __name__ == "__main__":
 
     T=args.T
     N=args.N
+    
+    if(args.n_sources > 0):
+        args.n_src_sib = args.n_sources
 
     ### ranker parameter
-    prob_seed = args.n_src/N
+    prob_seed = args.n_src_sib/N
     prob_sus = 0.5
     fp_rate = args.fpr if args.fpr > 0 else 1e-6
     fn_rate = args.fnr if args.fnr > 0 else 1e-6

@@ -86,7 +86,8 @@ def create_parser():
         help="Number of test per day for the ranking algorithm")
     parser.add_argument("--nt_rand", type=int, default=100, 
         help="Number of random tests per day to find symptomatics")
-    parser.add_argument("--n_sources", type=int, default=-2, help="Number of seed infections")
+    parser.add_argument("--n_sources","--n_src", type=int, default=-2,
+                        dest="n_sources", help="Number of seed infections")
 
     parser.add_argument("--day_start", default=10, type=int, dest="start_day",
         help="day to start the intervention")
@@ -442,7 +443,9 @@ def make_filename(args, N:int,T:int,seed:int, rk_name:str):
         fnr_str+=f"_fpr_{round(args.fpr,3)}"
     if np.abs(args.symp_p_t - 0.5) > 1e-10:
         fnr_str+=f"_psym_{round(args.symp_p_t,3)}"
+    
+    nsrc_s = f"_src_{args.n_sources}" if args.n_sources > 0 else ""
 
-    savefile_name = args.prefix +f"epi_kc_{int(N/1000)}k_T_{T}{fnr_str}_s_{seed}_rk_{rk_name}"
+    savefile_name = args.prefix +f"epi_kc_{int(N/1000)}k_T_{T}{nsrc_s}{fnr_str}_s_{seed}_rk_{rk_name}"
 
     return savefile_name
