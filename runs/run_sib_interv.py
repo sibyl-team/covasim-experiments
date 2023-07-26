@@ -130,6 +130,7 @@ if __name__ == "__main__":
     parser.add_argument("--no-bmed",action="store_false", dest="bmed", help="Use median value for beta")
     parser.add_argument("--fast_ct", action="store_true", dest="sib_fast_ctadd")
     parser.add_argument("--sib_tau", default=-1,type=int, help="Sib tau value")
+    parser.add_argument("--p_sus", default=0.5, type=float, help="p_sus for sib")
 
     args = parser.parse_args()
     base.check_args(args)
@@ -149,7 +150,7 @@ if __name__ == "__main__":
 
     ### ranker parameter
     prob_seed = args.n_src_sib/N
-    prob_sus = 0.5
+    prob_sus = args.p_sus
     fp_rate = args.fpr if args.fpr > 0 else 1e-6
     fn_rate = args.fnr if args.fnr > 0 else 1e-6
     if args.bmed:
