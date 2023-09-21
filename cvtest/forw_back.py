@@ -2,7 +2,7 @@ from collections import defaultdict
 import warnings
 import numpy as np
 from pandas import Series, DataFrame
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, average_precision_score, roc_curve
 
 #from epidemic import get_state
 
@@ -281,3 +281,22 @@ def forw_idcs_min_d(fow_poss_side, d_min=2, d_max=1000):
                 oth_inf_f.append(l[0])
             #oth_inf_f[l[1]].append(l[0])
     return oth_inf_f
+
+def get_rocs_aucs(idcs, rank, N, all_notinf, exclude_idcs=False, print_msg="", roc=True):
+    if len(idcs)>0:
+        idc_choose=set(idcs).union(all_notinf)
+        r = prep_ranking(idcs, idc_choose ,rank, N, exclude_idcs=exclude_idcs)
+        auc= roc_auc_score(*r)
+        ap = average_precision_score(*r)
+        #rocs["back"].append(roc_curve(*r))
+        if roc:
+            rocs = roc_curve(*r)
+        else:
+            rocs = None
+    else:
+        if len(print_msg) > 0: 
+            print(print_msg)
+        auc = np.nan
+        ap = np.nan
+        rocs = None
+    return auc, ap, rocs

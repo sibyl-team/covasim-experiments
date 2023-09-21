@@ -23,25 +23,30 @@ def compute_aucs_forback(mres, t_rk,seeds,N, random_ranks=False,other_ranks=None
         state = epian.get_state(N, mres[i]["people_dates"],t_rk)
         iobs, idc_find, rank, l=forback.select_idcs_forw_back(mres[i], t_rk, N, state)
         if rank is None:
-            print(f"No ranking found for seed {i}",end=" ")
             if other_ranks is None:
+                print(f"No ranking found for seed {i}",end=" ")
                 raise ValueError("You have to give a ranking if it's missing from the res dict")
             rank = other_ranks[i][t_rk]
         
         iback = idc_find["back"]
         ifor = idc_find["forw"]
         iforw_sec = idc_find["forw_2"]
+        iback2 = idc_find["back_2"]
+
         inf_rest = idc_find["else"]
         #print(i,l[-1])
         c.append(list(l))
         ib_only=set(iback).difference(ifor).difference(iforw_sec)
         if_only = set(ifor).difference(iback).difference(iforw_sec)
         if2_only = set(iforw_sec).difference(ifor).difference(iback)
+        ibb2 = set(iback2).difference(ifor).difference(iforw_sec)
         assert len(set(iobs).intersection(ifor))==0
         assert len(set(iobs).intersection(iforw_sec))==0
         assert len(set(iobs).intersection(inf_rest)) == 0
         counts_infect.append([len(iobs), len(set(iback)), len(set(ifor)), len(iforw_sec),
-                              len(inf_rest), len(ib_only), len(if_only), len(if2_only)])
+                                len(iback2),
+                              len(inf_rest), len(ib_only), len(if_only), len(if2_only),
+                              len(ibb2)])
         if random_ranks:
             rank= Series(np.random.rand(len(rank)))
         rank = rank/rank.max()
@@ -69,15 +74,18 @@ def compute_aucs_forback(mres, t_rk,seeds,N, random_ranks=False,other_ranks=None
         sn_forw =  set(ifor).union(all_notinf)
         rf = forback.prep_ranking(ifor,sn_forw ,rank, N, exclude_idcs=False)
         forw2_dat = forback.prep_ranking(iforw_sec, set(iforw_sec).union(all_notinf), rank, N, exclude_idcs=False)
+        auc_b2, ap_b2, roc_b2 = forback.get_rocs_aucs(iback2, rank, N, all_notinf, print_msg=f"Seed {i} has no back2", roc=False)
         aucs.append((auc_back,
                     roc_auc_score(*rf),
                      ##dat_side[0],
-                     roc_auc_score(*forw2_dat)
+                     roc_auc_score(*forw2_dat),
+                     auc_b2
                    ))
         aver_prec.append((ap_back,
                           average_precision_score(*rf), 
                           #dat_side[1],
-                          #average_precision_score(*forw2_dat),
+                          average_precision_score(*forw2_dat),
+                          ap_b2
                          ))
         rocs["forw"].append(roc_curve(*rf))
         print(f"{i:4d}/{len(seeds):4d}", end="\r")
