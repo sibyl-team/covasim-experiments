@@ -109,6 +109,22 @@ def find_idc_back(inf_log_f, idc_obsi, t_rk):
 
     return sources_back
 
+def find_idc_back2(inf_log_f, idc_obsi, t_rk):
+    inf_log = inf_log_f[inf_log_f["date"]<t_rk]
+    ### backward
+    df_back=inf_log[np.isin(inf_log["target"],idc_obsi)]
+    sources_back = df_back[df_back["source"]>=0]["source"]
+    sources_unobs = sources_back[~np.isin(sources_back, idc_obsi)]
+    #print(f"bb2 {len(sources_back)} -> {len(sources_unobs)}")
+    ### backward 2
+    df_back=inf_log[np.isin(inf_log["target"],sources_unobs)]
+    sources_back2 = df_back[df_back["source"]>=0]["source"]
+    ## remove idc already observed
+    sources_back2 = sources_back2[~np.isin(sources_back2, idc_obsi)]
+    #print(f"i_bb2: {len(sources_back2)}")
+
+    return sources_back
+
 def find_idc_forw(inf_log_f, idc_obsi, t_rk):
 
     inf_log = inf_log_f[inf_log_f["date"]<t_rk]
@@ -145,7 +161,7 @@ def select_idcs_forw_back(dat, t_lim, N, state):
     # forward nodes, have been infected by the observed (directly), not observ
     idc_forw=np.unique(find_idc_forw(inf_log,idcs_obs, t_lim))
     #backward of backward
-    idcs_back_back = np.unique(find_idc_back(inf_log, idc_back, t_lim))
+    idcs_back_back = np.unique(find_idc_back2(inf_log, idcs_obs, t_lim))
     
     
     frac_back_i = (infected[idc_back]).mean()
